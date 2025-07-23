@@ -57,7 +57,3 @@ pub fn remove_file(path: String) -> Result<(), String> {
     fs::remove_file(&path).map_err(|e| format!("Failed to remove file: {}", e))
 }
 
-// Add uuid to dependencies
-pub fn init() {
-    // Initialize commands module if needed
-}
