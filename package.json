@@ -25,7 +25,6 @@
     "format:rust": "cd src-tauri && cargo fmt",
     "test:rust": "cd src-tauri && cargo test",
     "check": "npm run type-check && npm run lint:rust",
-    "preinstall": "node -e \"if(process.env.npm_execpath.indexOf('yarn') === -1 && process.env.npm_execpath.indexOf('pnpm') === -1) throw new Error('This project requires npm')\"",
     "postinstall": "node scripts/check-rust.js || true",
     "prebuild:check": "node scripts/check-deps.js",
     "build:local": "npm run prebuild:check && npm run tauri:build",
