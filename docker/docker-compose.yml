@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  build-linux:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.linux-build
+    volumes:
+      - ..:/app
+      - cargo-cache:/root/.cargo/registry
+      - cargo-git:/root/.cargo/git
+      - target-cache:/app/target
+      - node-modules:/app/node_modules
+    environment:
+      - OUTPUT_DIR=/app/build-output
+    command: /usr/local/bin/build-claudeflow
+
+  # For building on older glibc versions (e.g., for compatibility)
+  build-linux-compat:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.linux-build
+      args:
+        BASE_IMAGE: ubuntu:18.04
+    volumes:
+      - ..:/app
+      - cargo-cache-compat:/root/.cargo/registry
+      - cargo-git-compat:/root/.cargo/git
+      - target-cache-compat:/app/target
+      - node-modules-compat:/app/node_modules
+    environment:
+      - OUTPUT_DIR=/app/build-output-compat
+    command: /usr/local/bin/build-claudeflow
+
+volumes:
+  cargo-cache:
+  cargo-git:
+  target-cache:
+  node-modules:
+  cargo-cache-compat:
+  cargo-git-compat:
+  target-cache-compat:
+  node-modules-compat:
