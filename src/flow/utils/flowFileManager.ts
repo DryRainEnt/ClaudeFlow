@@ -1,6 +1,9 @@
 import { Session, SessionMessage, FlowFile, FlowConversation } from '../types/flow.types';
+// @ts-ignore - Tauri API types are not available in test environment
 import { invoke } from '@tauri-apps/api/core';
+// @ts-ignore - Tauri API types are not available in test environment
 import { join } from '@tauri-apps/api/path';
+// @ts-ignore - Tauri API types are not available in test environment
 import { exists, createDir, readTextFile, writeTextFile } from '@tauri-apps/api/fs';
 
 export interface FlowDirectory {
@@ -242,7 +245,6 @@ class FlowFileManager {
     const session = await this.readSessionFile(projectDir, sessionId);
     if (!session) throw new Error('Session not found');
     
-    const dirs = await this.initializeFlowDirectory(projectDir);
     const hierarchy = await this.getSessionHierarchy(projectDir, sessionId);
     
     const exportData = {

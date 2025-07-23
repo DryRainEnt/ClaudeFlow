@@ -1,4 +1,5 @@
 import { useSettingsStore } from '../stores/settingsStore';
+// @ts-ignore - Tauri API types are not available in test environment
 import { invoke } from '@tauri-apps/api/core';
 import { rateLimiter } from '../utils/rateLimiter';
 
