@@ -56,4 +56,3 @@ pub fn remove_file(path: String) -> Result<(), String> {
     let path = PathBuf::from(path);
     fs::remove_file(&path).map_err(|e| format!("Failed to remove file: {}", e))
 }
-
