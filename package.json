@@ -46,7 +46,6 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.12",
     "@tailwindcss/forms": "^0.5.10",
-    "@tailwindcss/postcss": "^4.1.11",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2.3.1",
     "@tauri-apps/plugin-fs": "^2.4.1",
@@ -60,7 +59,7 @@
     "react-dom": "^18.3.1",
     "react-resizable-panels": "^3.0.3",
     "tailwind-merge": "^3.3.1",
-    "tailwindcss": "^4.1.11",
+    "tailwindcss": "^3.4.17",
     "zustand": "^5.0.6"
   },
   "devDependencies": {

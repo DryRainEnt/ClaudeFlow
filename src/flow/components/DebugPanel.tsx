@@ -6,6 +6,7 @@ export const DebugPanel: React.FC = () => {
   const [clickCount, setClickCount] = useState(0);
   const [tauriStatus, setTauriStatus] = useState<string>('Checking...');
   const [error, setError] = useState<string>('');
+  const [modalTest, setModalTest] = useState(false);
 
   useEffect(() => {
     // Check Tauri environment
@@ -95,6 +96,47 @@ export const DebugPanel: React.FC = () => {
       <div style={{ marginTop: 10, fontSize: 12 }}>
         <p>User Agent: {navigator.userAgent}</p>
       </div>
+      
+      <div style={{ marginTop: 10 }}>
+        <button
+          onClick={() => setModalTest(!modalTest)}
+          style={{
+            padding: '10px',
+            background: 'purple',
+            color: 'white',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          Toggle Modal Test
+        </button>
+        <p>Modal state: {modalTest ? 'OPEN' : 'CLOSED'}</p>
+      </div>
+      
+      {modalTest && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000
+        }}>
+          <div style={{
+            background: 'white',
+            padding: 20,
+            borderRadius: 8
+          }}>
+            <h3>Test Modal</h3>
+            <p>This modal is working!</p>
+            <button onClick={() => setModalTest(false)}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

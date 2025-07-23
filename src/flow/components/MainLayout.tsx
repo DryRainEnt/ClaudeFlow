@@ -25,6 +25,17 @@ const MainLayout: React.FC = () => {
   const [showWorkflowDemo, setShowWorkflowDemo] = useState(false);
   
   const apiSettings = useSettingsStore((state) => state.apiSettings);
+  
+  // Debug: Log state changes
+  useEffect(() => {
+    console.log('[MainLayout] State changed:', {
+      showProjectInit,
+      showSettings,
+      showFirstRun,
+      showWorkflowDemo,
+      selectedSessionId
+    });
+  }, [showProjectInit, showSettings, showFirstRun, showWorkflowDemo, selectedSessionId]);
 
   // Group sessions by type
   const sessionsByType = Object.values(sessions).reduce(
@@ -202,11 +213,15 @@ const MainLayout: React.FC = () => {
                 <button
                   onClick={() => {
                     console.log('[MainLayout] New Project clicked, apiKey exists:', !!apiSettings.apiKey);
-                    setShowProjectInit(true);
+                    if (!apiSettings.apiKey) {
+                      console.log('[MainLayout] No API key, showing settings');
+                      setShowSettings(true);
+                    } else {
+                      setShowProjectInit(true);
+                    }
                   }}
                   className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
                   title="New Project"
-                  disabled={!apiSettings.apiKey}
                 >
                   + New Project
                 </button>
@@ -215,9 +230,18 @@ const MainLayout: React.FC = () => {
                     e.preventDefault();
                     e.stopPropagation();
                     debugLog('MainLayout', 'Demo button clicked', { showWorkflowDemo });
+                    console.log('[MainLayout] Demo button clicked!');
                     setShowWorkflowDemo(true);
                   }}
-                  className="px-3 py-1 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700"
+                  style={{
+                    padding: '4px 12px',
+                    backgroundColor: '#9333ea',
+                    color: 'white',
+                    fontSize: '14px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
                   title="Workflow Demo"
                 >
                   Demo
@@ -402,7 +426,7 @@ const MainLayout: React.FC = () => {
       
       {/* Workflow Demo Modal */}
       {showWorkflowDemo && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
           <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
               <h2 className="text-xl font-bold">Workflow Demo</h2>
