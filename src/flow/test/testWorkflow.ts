@@ -79,7 +79,5 @@ export async function runTestWorkflow() {
   return executor;
 }
 
-// If running directly
-if (require.main === module) {
-  runTestWorkflow().catch(console.error);
-}
+// Export for use in browser environment
+export default runTestWorkflow;

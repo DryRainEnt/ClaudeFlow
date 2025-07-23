@@ -1,7 +1,6 @@
-import { Session, SessionMessage, SessionStatus, FlowMessage, WorkPlan, RequestCall } from '../types/flow.types';
+import { Session, SessionMessage, FlowMessage, WorkPlan, RequestCall } from '../types/flow.types';
 import { claudeService } from './claudeService';
 import { flowFileManager } from '../utils/flowFileManager';
-import { EventEmitter } from 'events';
 
 export interface ExecutionConfig {
   projectDir: string;
@@ -9,15 +8,34 @@ export interface ExecutionConfig {
   messagePollingInterval?: number;
 }
 
-export class SessionExecutor extends EventEmitter {
+// Event types for the executor
+export type ExecutorEventType = 
+  | 'executor:started'
+  | 'executor:stopped'
+  | 'session:created'
+  | 'session:updated'
+  | 'session:activated'
+  | 'session:completed'
+  | 'session:error'
+  | 'session:paused'
+  | 'session:queued'
+  | 'message:sent'
+  | 'supervisor:workers-completed'
+  | 'supervisor:worker-result'
+  | 'manager:supervisor-result'
+  | 'error';
+
+export type ExecutorEventCallback = (data?: any) => void;
+
+export class SessionExecutor {
   private sessions: Map<string, Session> = new Map();
   private activeSessions: Set<string> = new Set();
   private messageQueue: SessionMessage[] = [];
-  private pollingInterval: NodeJS.Timeout | null = null;
+  private pollingInterval: number | null = null;
   private config: ExecutionConfig;
+  private eventListeners: Map<ExecutorEventType, Set<ExecutorEventCallback>> = new Map();
 
   constructor(config: ExecutionConfig) {
-    super();
     this.config = {
       maxConcurrentSessions: 5,
       messagePollingInterval: 1000,
@@ -336,7 +354,7 @@ Please complete this task and provide the implementation.
 
   // Start polling for messages
   private startMessagePolling(): void {
-    this.pollingInterval = setInterval(() => {
+    this.pollingInterval = window.setInterval(() => {
       this.processMessages().catch(error => {
         this.emit('error', error);
       });
@@ -564,6 +582,28 @@ Please complete this task and provide the implementation.
   // Get active sessions
   getActiveSessions(): Session[] {
     return Array.from(this.activeSessions).map(id => this.sessions.get(id)!).filter(Boolean);
+  }
+
+  // Event emitter methods
+  on(event: ExecutorEventType, callback: ExecutorEventCallback): void {
+    if (!this.eventListeners.has(event)) {
+      this.eventListeners.set(event, new Set());
+    }
+    this.eventListeners.get(event)!.add(callback);
+  }
+
+  off(event: ExecutorEventType, callback: ExecutorEventCallback): void {
+    const listeners = this.eventListeners.get(event);
+    if (listeners) {
+      listeners.delete(callback);
+    }
+  }
+
+  private emit(event: ExecutorEventType, data?: any): void {
+    const listeners = this.eventListeners.get(event);
+    if (listeners) {
+      listeners.forEach(callback => callback(data));
+    }
   }
 }
 
