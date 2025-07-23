@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSettingsStore } from '../stores/settingsStore';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../utils/tauriProxy';
 
 interface SettingsModalProps {
   isOpen: boolean;

@@ -27,6 +27,18 @@ export default defineConfig(async () => ({
       ]
     }
   },
+  optimizeDeps: {
+    exclude: [
+      '@tauri-apps/api',
+      '@tauri-apps/api/core',
+      '@tauri-apps/api/window',
+      '@tauri-apps/api/fs',
+      '@tauri-apps/api/dialog',
+      '@tauri-apps/api/path',
+      '@tauri-apps/plugin-dialog',
+      '@tauri-apps/plugin-fs'
+    ]
+  },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //

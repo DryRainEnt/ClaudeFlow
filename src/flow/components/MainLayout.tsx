@@ -9,7 +9,7 @@ import { WorkflowDemo } from './WorkflowDemo';
 import { useSessionStore } from '../stores/sessionStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { Session } from '../types/flow.types';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../utils/tauriProxy';
 
 const MainLayout: React.FC = () => {
   const sessions = useSessionStore((state) => state.sessions);

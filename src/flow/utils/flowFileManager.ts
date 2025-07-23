@@ -1,10 +1,5 @@
 import { Session, SessionMessage, FlowFile, FlowConversation } from '../types/flow.types';
-// @ts-ignore - Tauri API types are not available in test environment
-import { invoke } from '@tauri-apps/api/core';
-// @ts-ignore - Tauri API types are not available in test environment
-import { join } from '@tauri-apps/api/path';
-// @ts-ignore - Tauri API types are not available in test environment
-import { exists, createDir, readTextFile, writeTextFile } from '@tauri-apps/api/fs';
+import { invoke, fs, path } from './tauriProxy';
 
 export interface FlowDirectory {
   root: string;
@@ -17,31 +12,31 @@ export interface FlowDirectory {
 class FlowFileManager {
   // Initialize .flow directory structure
   async initializeFlowDirectory(projectDir: string): Promise<FlowDirectory> {
-    const flowDir = await join(projectDir, '.flow');
+    const flowDir = await path.join(projectDir, '.flow');
     const dirs: FlowDirectory = {
       root: flowDir,
-      sessions: await join(flowDir, 'sessions'),
-      messages: await join(flowDir, 'messages'),
-      history: await join(flowDir, 'history'),
-      artifacts: await join(flowDir, 'artifacts')
+      sessions: await path.join(flowDir, 'sessions'),
+      messages: await path.join(flowDir, 'messages'),
+      history: await path.join(flowDir, 'history'),
+      artifacts: await path.join(flowDir, 'artifacts')
     };
 
     // Create directories if they don't exist
     for (const dir of Object.values(dirs)) {
-      if (!(await exists(dir))) {
-        await createDir(dir, { recursive: true });
+      if (!(await fs.exists(dir))) {
+        await fs.createDir(dir, { recursive: true });
       }
     }
 
     // Create metadata file
-    const metadataPath = await join(flowDir, 'metadata.json');
-    if (!(await exists(metadataPath))) {
+    const metadataPath = await path.join(flowDir, 'metadata.json');
+    if (!(await fs.exists(metadataPath))) {
       const metadata = {
         version: '1.0.0',
         created: new Date().toISOString(),
         projectDir: projectDir
       };
-      await writeTextFile(metadataPath, JSON.stringify(metadata, null, 2));
+      await fs.writeTextFile(metadataPath, JSON.stringify(metadata, null, 2));
     }
 
     return dirs;
@@ -50,37 +45,37 @@ class FlowFileManager {
   // Write session file
   async writeSessionFile(projectDir: string, session: Session): Promise<void> {
     const dirs = await this.initializeFlowDirectory(projectDir);
-    const sessionPath = await join(dirs.sessions, `${session.id}.json`);
+    const sessionPath = await path.join(dirs.sessions, `${session.id}.json`);
     
     const sessionData = {
       ...session,
       lastUpdated: new Date().toISOString()
     };
     
-    await writeTextFile(sessionPath, JSON.stringify(sessionData, null, 2));
+    await fs.writeTextFile(sessionPath, JSON.stringify(sessionData, null, 2));
     
     // Also write to history for tracking
-    const historyPath = await join(dirs.history, `${session.id}-${Date.now()}.json`);
-    await writeTextFile(historyPath, JSON.stringify(sessionData, null, 2));
+    const historyPath = await path.join(dirs.history, `${session.id}-${Date.now()}.json`);
+    await fs.writeTextFile(historyPath, JSON.stringify(sessionData, null, 2));
   }
 
   // Read session file
   async readSessionFile(projectDir: string, sessionId: string): Promise<Session | null> {
     const dirs = await this.initializeFlowDirectory(projectDir);
-    const sessionPath = await join(dirs.sessions, `${sessionId}.json`);
+    const sessionPath = await path.join(dirs.sessions, `${sessionId}.json`);
     
-    if (!(await exists(sessionPath))) {
+    if (!(await fs.exists(sessionPath))) {
       return null;
     }
     
-    const content = await readTextFile(sessionPath);
+    const content = await fs.readTextFile(sessionPath);
     return JSON.parse(content) as Session;
   }
 
   // Write message to queue
   async writeMessage(projectDir: string, message: SessionMessage): Promise<void> {
     const dirs = await this.initializeFlowDirectory(projectDir);
-    const messagePath = await join(dirs.messages, `${message.id}.json`);
+    const messagePath = await path.join(dirs.messages, `${message.id}.json`);
     
     const messageData = {
       ...message,
@@ -88,7 +83,7 @@ class FlowFileManager {
       created: new Date().toISOString()
     };
     
-    await writeTextFile(messagePath, JSON.stringify(messageData, null, 2));
+    await fs.writeTextFile(messagePath, JSON.stringify(messageData, null, 2));
   }
 
   // Read pending messages
@@ -102,8 +97,8 @@ class FlowFileManager {
       
       for (const file of files) {
         if (file.endsWith('.json')) {
-          const filePath = await join(dirs.messages, file);
-          const content = await readTextFile(filePath);
+          const filePath = await path.join(dirs.messages, file);
+          const content = await fs.readTextFile(filePath);
           const messageData = JSON.parse(content);
           
           if (messageData.status === 'pending') {
@@ -121,22 +116,22 @@ class FlowFileManager {
   // Mark message as processed
   async markMessageProcessed(projectDir: string, messageId: string): Promise<void> {
     const dirs = await this.initializeFlowDirectory(projectDir);
-    const messagePath = await join(dirs.messages, `${messageId}.json`);
+    const messagePath = await path.join(dirs.messages, `${messageId}.json`);
     
-    if (await exists(messagePath)) {
-      const content = await readTextFile(messagePath);
+    if (await fs.exists(messagePath)) {
+      const content = await fs.readTextFile(messagePath);
       const messageData = JSON.parse(content);
       messageData.status = 'processed';
       messageData.processedAt = new Date().toISOString();
       
-      await writeTextFile(messagePath, JSON.stringify(messageData, null, 2));
+      await fs.writeTextFile(messagePath, JSON.stringify(messageData, null, 2));
     }
   }
 
   // Write conversation history
   async writeConversationHistory(projectDir: string, sessionId: string, conversation: FlowConversation): Promise<void> {
     const dirs = await this.initializeFlowDirectory(projectDir);
-    const conversationPath = await join(dirs.history, `conversation-${sessionId}.flow`);
+    const conversationPath = await path.join(dirs.history, `conversation-${sessionId}.flow`);
     
     const flowFile: FlowFile = {
       version: '1.0.0',
@@ -144,20 +139,20 @@ class FlowFileManager {
       checksum: await this.calculateChecksum(conversation)
     };
     
-    await writeTextFile(conversationPath, JSON.stringify(flowFile, null, 2));
+    await fs.writeTextFile(conversationPath, JSON.stringify(flowFile, null, 2));
   }
 
   // Save artifact (code, documents, etc.)
   async saveArtifact(projectDir: string, sessionId: string, artifactName: string, content: string): Promise<string> {
     const dirs = await this.initializeFlowDirectory(projectDir);
-    const sessionArtifactDir = await join(dirs.artifacts, sessionId);
+    const sessionArtifactDir = await path.join(dirs.artifacts, sessionId);
     
-    if (!(await exists(sessionArtifactDir))) {
-      await createDir(sessionArtifactDir, { recursive: true });
+    if (!(await fs.exists(sessionArtifactDir))) {
+      await fs.createDir(sessionArtifactDir, { recursive: true });
     }
     
-    const artifactPath = await join(sessionArtifactDir, artifactName);
-    await writeTextFile(artifactPath, content);
+    const artifactPath = await path.join(sessionArtifactDir, artifactName);
+    await fs.writeTextFile(artifactPath, content);
     
     return artifactPath;
   }
@@ -172,8 +167,8 @@ class FlowFileManager {
       
       for (const file of files) {
         if (file.endsWith('.json')) {
-          const filePath = await join(dirs.sessions, file);
-          const content = await readTextFile(filePath);
+          const filePath = await path.join(dirs.sessions, file);
+          const content = await fs.readTextFile(filePath);
           sessions.push(JSON.parse(content) as Session);
         }
       }
@@ -213,8 +208,8 @@ class FlowFileManager {
       
       for (const file of files) {
         if (file.endsWith('.json')) {
-          const filePath = await join(dirs.messages, file);
-          const content = await readTextFile(filePath);
+          const filePath = await path.join(dirs.messages, file);
+          const content = await fs.readTextFile(filePath);
           const messageData = JSON.parse(content);
           
           if (messageData.status === 'processed' && new Date(messageData.created) < cutoffDate) {
@@ -253,12 +248,12 @@ class FlowFileManager {
       version: '1.0.0'
     };
     
-    await writeTextFile(exportPath, JSON.stringify(exportData, null, 2));
+    await fs.writeTextFile(exportPath, JSON.stringify(exportData, null, 2));
   }
 
   // Import session data
   async importSessionData(projectDir: string, importPath: string): Promise<Session> {
-    const content = await readTextFile(importPath);
+    const content = await fs.readTextFile(importPath);
     const importData = JSON.parse(content);
     
     if (!importData.session) {

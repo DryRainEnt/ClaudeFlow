@@ -1,5 +1,4 @@
-// @ts-ignore - Tauri API types are not available in test environment
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../utils/tauriProxy';
 import { FlowFile, FlowConversation } from '../types/flow.types';
 
 export class FlowService {
