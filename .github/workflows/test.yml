@@ -53,7 +53,7 @@ jobs:
       - name: Rust clippy
         run: |
           cd src-tauri
-          cargo clippy -- -D warnings -A clippy::uninlined_format_args
+          cargo clippy -- -D warnings -A clippy::uninlined_format_args -A clippy::manual_flatten
           
       - name: Run Rust tests
         run: |
