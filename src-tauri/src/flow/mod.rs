@@ -37,21 +37,19 @@ pub struct FlowFile {
 }
 
 pub fn read_flow_file(path: &Path) -> Result<FlowFile, String> {
-    let content = fs::read_to_string(path)
-        .map_err(|e| format!("Failed to read file: {}", e))?;
-    
-    let flow_file: FlowFile = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse flow file: {}", e))?;
-    
+    let content = fs::read_to_string(path).map_err(|e| format!("Failed to read file: {}", e))?;
+
+    let flow_file: FlowFile =
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse flow file: {}", e))?;
+
     Ok(flow_file)
 }
 
 pub fn write_flow_file(path: &Path, flow_file: &FlowFile) -> Result<(), String> {
     let content = serde_json::to_string_pretty(flow_file)
         .map_err(|e| format!("Failed to serialize flow file: {}", e))?;
-    
-    fs::write(path, content)
-        .map_err(|e| format!("Failed to write file: {}", e))?;
-    
+
+    fs::write(path, content).map_err(|e| format!("Failed to write file: {}", e))?;
+
     Ok(())
 }

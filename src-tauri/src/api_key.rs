@@ -31,10 +31,11 @@ impl From<keyring::Error> for ApiKeyError {
 pub fn save_api_key(api_key: String) -> Result<(), String> {
     let entry = Entry::new(SERVICE_NAME, API_KEY_ACCOUNT)
         .map_err(|e| format!("Failed to create keyring entry: {}", e))?;
-    
-    entry.set_password(&api_key)
+
+    entry
+        .set_password(&api_key)
         .map_err(|e| format!("Failed to save API key: {}", e))?;
-    
+
     Ok(())
 }
 
@@ -43,7 +44,7 @@ pub fn save_api_key(api_key: String) -> Result<(), String> {
 pub fn get_api_key() -> Result<String, String> {
     let entry = Entry::new(SERVICE_NAME, API_KEY_ACCOUNT)
         .map_err(|e| format!("Failed to create keyring entry: {}", e))?;
-    
+
     match entry.get_password() {
         Ok(password) => Ok(password),
         Err(keyring::Error::NoEntry) => Err("No API key found".to_string()),
@@ -56,7 +57,7 @@ pub fn get_api_key() -> Result<String, String> {
 pub fn has_api_key() -> Result<bool, String> {
     let entry = Entry::new(SERVICE_NAME, API_KEY_ACCOUNT)
         .map_err(|e| format!("Failed to create keyring entry: {}", e))?;
-    
+
     match entry.get_password() {
         Ok(_) => Ok(true),
         Err(keyring::Error::NoEntry) => Ok(false),
@@ -69,7 +70,7 @@ pub fn has_api_key() -> Result<bool, String> {
 pub fn delete_api_key() -> Result<(), String> {
     let entry = Entry::new(SERVICE_NAME, API_KEY_ACCOUNT)
         .map_err(|e| format!("Failed to create keyring entry: {}", e))?;
-    
+
     match entry.delete_credential() {
         Ok(_) => Ok(()),
         Err(keyring::Error::NoEntry) => Ok(()), // Already deleted
@@ -81,7 +82,7 @@ pub fn delete_api_key() -> Result<(), String> {
 #[tauri::command]
 pub async fn validate_api_connection(api_key: String, endpoint: String) -> Result<bool, String> {
     let client = reqwest::Client::new();
-    
+
     // Make a simple request to validate the API key
     let response = client
         .post(&endpoint)
@@ -99,10 +100,13 @@ pub async fn validate_api_connection(api_key: String, endpoint: String) -> Resul
         .send()
         .await
         .map_err(|e| format!("Failed to connect to API: {}", e))?;
-    
+
     match response.status().as_u16() {
         200 => Ok(true),
         401 => Err("Invalid API key".to_string()),
-        _ => Err(format!("API validation failed with status: {}", response.status())),
+        _ => Err(format!(
+            "API validation failed with status: {}",
+            response.status()
+        )),
     }
 }

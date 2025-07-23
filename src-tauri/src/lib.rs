@@ -1,9 +1,11 @@
-mod flow;
-mod commands;
 mod api_key;
+mod commands;
+mod flow;
 
-use commands::{load_flow_file, save_flow_file, create_new_conversation, read_directory, remove_file};
-use api_key::{save_api_key, get_api_key, has_api_key, delete_api_key, validate_api_connection};
+use api_key::{delete_api_key, get_api_key, has_api_key, save_api_key, validate_api_connection};
+use commands::{
+    create_new_conversation, load_flow_file, read_directory, remove_file, save_flow_file,
+};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
