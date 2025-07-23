@@ -43,7 +43,14 @@ export const mockInvoke = async (cmd: string, args?: any): Promise<any> => {
   switch (cmd) {
     case 'has_api_key':
       return false;
+    case 'get_api_key':
+      throw new Error('No API key found');
+    case 'save_api_key':
+      console.log('Mock: API key saved');
+      return null;
     case 'verify_api_key':
+      return true;
+    case 'validate_api_connection':
       return true;
     case 'create_new_conversation':
       return {
@@ -57,6 +64,7 @@ export const mockInvoke = async (cmd: string, args?: any): Promise<any> => {
     case 'read_directory':
       return [];
     default:
+      console.warn(`Mock: Unhandled command ${cmd}`);
       return null;
   }
 };
@@ -86,11 +94,18 @@ export const mockPath = {
 
 // Wrapper functions that work in both environments
 export const invoke = async <T = any>(cmd: string, args?: any): Promise<T> => {
-  if (isTauri()) {
-    const { invoke } = await getTauriApi();
-    return invoke<T>(cmd, args);
+  try {
+    if (isTauri()) {
+      const { invoke } = await getTauriApi();
+      const result = await invoke<T>(cmd, args);
+      console.log(`[TauriProxy] Invoke success: ${cmd}`, result);
+      return result;
+    }
+    return mockInvoke(cmd, args) as T;
+  } catch (error) {
+    console.error(`[TauriProxy] Invoke error: ${cmd}`, error);
+    throw error;
   }
-  return mockInvoke(cmd, args) as T;
 };
 
 export const fs = {

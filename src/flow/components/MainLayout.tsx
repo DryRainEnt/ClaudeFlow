@@ -10,6 +10,7 @@ import { useSessionStore } from '../stores/sessionStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { Session } from '../types/flow.types';
 import { invoke } from '../utils/tauriProxy';
+import { debugLog, checkEnvironment } from '../utils/debugHelper';
 
 const MainLayout: React.FC = () => {
   const sessions = useSessionStore((state) => state.sessions);
@@ -35,20 +36,29 @@ const MainLayout: React.FC = () => {
   );
 
   const handleSessionClick = (session: Session) => {
+    console.log('[MainLayout] Session clicked:', session.id);
     setActiveSession(session.id);
     setSelectedSessionId(session.id);
   };
 
   // Check for API key on first run
   useEffect(() => {
+    // Check environment on component mount
+    checkEnvironment();
+    
     const checkApiKey = async () => {
       try {
+        debugLog('MainLayout', 'Checking API key...');
         const hasKey = await invoke<boolean>('has_api_key');
+        debugLog('MainLayout', 'API key check result', hasKey);
         if (!hasKey) {
           setShowFirstRun(true);
         }
       } catch (error) {
+        debugLog('MainLayout', 'Failed to check API key', error);
         console.error('Failed to check API key:', error);
+        // Show settings on error
+        setShowFirstRun(true);
       }
     };
     
@@ -190,7 +200,10 @@ const MainLayout: React.FC = () => {
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setShowProjectInit(true)}
+                  onClick={() => {
+                    console.log('[MainLayout] New Project clicked, apiKey exists:', !!apiSettings.apiKey);
+                    setShowProjectInit(true);
+                  }}
                   className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
                   title="New Project"
                   disabled={!apiSettings.apiKey}
@@ -198,7 +211,12 @@ const MainLayout: React.FC = () => {
                   + New Project
                 </button>
                 <button
-                  onClick={() => setShowWorkflowDemo(true)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    debugLog('MainLayout', 'Demo button clicked', { showWorkflowDemo });
+                    setShowWorkflowDemo(true);
+                  }}
                   className="px-3 py-1 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700"
                   title="Workflow Demo"
                 >
@@ -206,7 +224,10 @@ const MainLayout: React.FC = () => {
                 </button>
                 {Object.keys(sessions).length > 0 && (
                   <button
-                    onClick={clearAllSessions}
+                    onClick={() => {
+                      console.log('[MainLayout] Clear All clicked');
+                      clearAllSessions();
+                    }}
                     className="px-3 py-1 bg-red-600 text-white text-sm rounded-md hover:bg-red-700"
                     title="Clear All"
                   >

@@ -11,6 +11,7 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "tauri:build:debug": "tauri build --debug",
+    "tauri:build:debug:windows": "tauri build --debug --config src-tauri/tauri.conf.debug.json --target x86_64-pc-windows-msvc",
     "tauri:build:all": "npm run tauri:build:windows && npm run tauri:build:mac && npm run tauri:build:linux",
     "tauri:build:windows": "tauri build --target x86_64-pc-windows-msvc",
     "tauri:build:mac": "tauri build --target universal-apple-darwin",
