@@ -176,3 +176,69 @@ export const openSystemTerminal = async (workingDirectory = null) => {
     return { success: false, error: error.toString() };
   }
 };
+
+// ========== PTY 터미널 함수들 ==========
+
+// PTY 터미널 생성
+export const createPtyTerminal = async (terminalId, workingDirectory = null) => {
+  try {
+    const result = await safeInvoke('create_pty_terminal', {
+      terminalId: terminalId,
+      workingDirectory: workingDirectory
+    });
+    return { success: true, data: result };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+};
+
+// PTY 터미널 데이터 읽기
+export const readPtyTerminal = async (terminalId) => {
+  try {
+    const result = await safeInvoke('read_pty_terminal', {
+      terminalId: terminalId
+    });
+    return { success: true, data: result };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+};
+
+// PTY 터미널 데이터 쓰기
+export const writePtyTerminal = async (terminalId, data) => {
+  try {
+    const result = await safeInvoke('write_pty_terminal', {
+      terminalId: terminalId,
+      data: data
+    });
+    return { success: true, message: result };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+};
+
+// PTY 터미널 크기 조정
+export const resizePtyTerminal = async (terminalId, rows, cols) => {
+  try {
+    const result = await safeInvoke('resize_pty_terminal', {
+      terminalId: terminalId,
+      rows: rows,
+      cols: cols
+    });
+    return { success: true, message: result };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+};
+
+// PTY 터미널 종료
+export const destroyPtyTerminal = async (terminalId) => {
+  try {
+    const result = await safeInvoke('destroy_pty_terminal', {
+      terminalId: terminalId
+    });
+    return { success: true, message: result };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+};

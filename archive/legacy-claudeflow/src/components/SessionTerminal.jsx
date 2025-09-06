@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createTerminal, executeCommand, terminateTerminal, openSystemTerminal } from '../utils/tauri';
+import PtyTerminal from './PtyTerminal';
 
 const SessionTerminal = ({ sessionId, sessionType = 'manager' }) => {
   const [terminalId] = useState(sessionId + 1000); // 유니크한 터미널 ID
@@ -7,6 +8,7 @@ const SessionTerminal = ({ sessionId, sessionType = 'manager' }) => {
   const [output, setOutput] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [usePtyMode, setUsePtyMode] = useState(true); // PTY 모드 기본 활성화
 
   useEffect(() => {
     // 컴포넌트 마운트 시 터미널 생성
@@ -123,61 +125,83 @@ const SessionTerminal = ({ sessionId, sessionType = 'manager' }) => {
         </h3>
         <div className="flex gap-2">
           <button
+            onClick={() => setUsePtyMode(!usePtyMode)}
+            className={`px-3 py-1 text-white text-xs rounded ${
+              usePtyMode ? 'bg-purple-500 hover:bg-purple-600' : 'bg-gray-500 hover:bg-gray-600'
+            }`}
+          >
+            {usePtyMode ? '🔄 PTY 모드' : '📝 레거시 모드'}
+          </button>
+          <button
             onClick={handleOpenSystemTerminal}
             className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs rounded"
           >
             🖥️ 시스템 터미널
           </button>
-          <button
-            onClick={checkClaudeEnvironment}
-            disabled={!isCreated || isLoading}
-            className="px-3 py-1 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white text-xs rounded"
-          >
-            🔍 환경 확인
-          </button>
+          {!usePtyMode && (
+            <button
+              onClick={checkClaudeEnvironment}
+              disabled={!isCreated || isLoading}
+              className="px-3 py-1 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white text-xs rounded"
+            >
+              🔍 환경 확인
+            </button>
+          )}
         </div>
       </div>
 
-      {/* 터미널 출력 */}
-      <div className="bg-black text-green-400 p-3 rounded text-sm font-mono h-48 overflow-y-auto mb-3">
-        {isLoading && (
-          <div className="text-yellow-400">터미널 초기화 중...</div>
-        )}
-        {output.map((line, index) => (
-          <div key={index} className="mb-1">
-            <span className="text-gray-500">[{line.timestamp}]</span>
-            <span className={`ml-2 ${
-              line.type === '에러' ? 'text-red-400' :
-              line.type === '시스템' ? 'text-cyan-400' :
-              line.type === '입력' ? 'text-yellow-400' :
-              'text-green-400'
-            }`}>
-              {line.type === '에러' ? '❌' : 
-               line.type === '시스템' ? 'ℹ️' :
-               line.type === '입력' ? '▶' : '✓'} {line.message}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* 명령어 입력 */}
-      <form onSubmit={handleCommand} className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="명령어 입력... (예: claude auth status)"
-          disabled={!isCreated || isLoading}
-          className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      {/* 터미널 표시 영역 */}
+      {usePtyMode ? (
+        // PTY 모드: xterm.js 기반 완전한 터미널
+        <PtyTerminal 
+          sessionId={sessionId} 
+          sessionType={sessionType}
+          className="mb-3"
         />
-        <button
-          type="submit"
-          disabled={!isCreated || isLoading || !input.trim()}
-          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white text-sm rounded"
-        >
-          실행
-        </button>
-      </form>
+      ) : (
+        // 레거시 모드: 기존 명령어 기반 터미널
+        <>
+          <div className="bg-black text-green-400 p-3 rounded text-sm font-mono h-48 overflow-y-auto mb-3">
+            {isLoading && (
+              <div className="text-yellow-400">터미널 초기화 중...</div>
+            )}
+            {output.map((line, index) => (
+              <div key={index} className="mb-1">
+                <span className="text-gray-500">[{line.timestamp}]</span>
+                <span className={`ml-2 ${
+                  line.type === '에러' ? 'text-red-400' :
+                  line.type === '시스템' ? 'text-cyan-400' :
+                  line.type === '입력' ? 'text-yellow-400' :
+                  'text-green-400'
+                }`}>
+                  {line.type === '에러' ? '❌' : 
+                   line.type === '시스템' ? 'ℹ️' :
+                   line.type === '입력' ? '▶' : '✓'} {line.message}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* 명령어 입력 */}
+          <form onSubmit={handleCommand} className="flex gap-2">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="명령어 입력... (예: claude auth status)"
+              disabled={!isCreated || isLoading}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="submit"
+              disabled={!isCreated || isLoading || !input.trim()}
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white text-sm rounded"
+            >
+              실행
+            </button>
+          </form>
+        </>
+      )}
 
       {!isCreated && !isLoading && (
         <div className="mt-2 text-red-600 text-sm">
