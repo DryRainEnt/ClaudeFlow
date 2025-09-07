@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>설정 메뉴</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: transparent;
+            overflow: hidden;
+            user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .context-menu {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            padding: 8px;
+            min-width: 180px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(139, 69, 19, 0.3);
+            animation: contextAppear 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        .context-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .context-item:hover {
+            background: rgba(139, 69, 19, 0.15);
+            color: #8B4513;
+            transform: translateX(2px);
+        }
+        
+        .context-item .icon {
+            margin-right: 10px;
+            font-size: 16px;
+            width: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .context-item .text {
+            flex: 1;
+        }
+        
+        .context-divider {
+            height: 1px;
+            background: rgba(139, 69, 19, 0.2);
+            margin: 6px 8px;
+        }
+        
+        .context-item:active {
+            transform: translateX(2px) scale(0.98);
+        }
+        
+        @keyframes contextAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+    </style>
+</head>
+<body onclick="closeMenu()">
+    <div class="context-menu">
+        <div class="context-item" onclick="openMainSettings()">
+            <span class="icon">⚙️</span>
+            <span class="text">설정</span>
+        </div>
+        <div class="context-item" onclick="openAuthSettings()">
+            <span class="icon">🔑</span>
+            <span class="text">인증 설정</span>
+        </div>
+        <div class="context-item" onclick="openCustomization()">
+            <span class="icon">🎨</span>
+            <span class="text">꾸미기</span>
+        </div>
+        <div class="context-divider"></div>
+        <div class="context-item" onclick="viewLogs()">
+            <span class="icon">📋</span>
+            <span class="text">로그 보기</span>
+        </div>
+        <div class="context-item" onclick="showSystemInfo()">
+            <span class="icon">💻</span>
+            <span class="text">시스템 정보</span>
+        </div>
+        <div class="context-divider"></div>
+        <div class="context-item" onclick="showAbout()">
+            <span class="icon">ℹ️</span>
+            <span class="text">정보</span>
+        </div>
+    </div>
+    
+    <script>
+        function closeMenu() {
+            console.log('📱 컨텍스트 메뉴 닫기');
+            window.close();
+        }
+        
+        function openMainSettings() {
+            console.log('⚙️ 메인 설정 열기');
+            closeMenu();
+        }
+        
+        function openAuthSettings() {
+            console.log('🔑 Claude SDK 인증 설정 열기');
+            
+            // Electron main process에 인증 설정창 열기 요청
+            if (require) {
+                require('electron').ipcRenderer.send('open-auth-settings');
+            }
+            closeMenu();
+        }
+        
+        function openCustomization() {
+            console.log('🎨 커스터마이징 메뉴 열기');
+            closeMenu();
+        }
+        
+        function viewLogs() {
+            console.log('📋 로그 뷰어 열기');
+            closeMenu();
+        }
+        
+        function showSystemInfo() {
+            console.log('💻 시스템 정보 표시');
+            closeMenu();
+        }
+        
+        function showAbout() {
+            console.log('ℹ️ 정보창 열기');
+            closeMenu();
+        }
+        
+        // 2초 후 자동 닫기
+        setTimeout(() => {
+            closeMenu();
+        }, 8000);
+        
+        console.log('📱 컨텍스트 메뉴 윈도우 로드 완료!');
+    </script>
+</body>
+</html>

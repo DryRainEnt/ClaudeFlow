@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Claude SDK 인증 설정</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .auth-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        
+        .auth-methods {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .auth-method {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .auth-method:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
+        }
+        
+        .auth-method.selected {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .auth-method.selected::before {
+            content: '✓';
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            width: 24px;
+            height: 24px;
+            background: #667eea;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .method-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .method-icon {
+            font-size: 24px;
+        }
+        
+        .method-description {
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+        
+        .method-status {
+            font-size: 14px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            display: inline-block;
+            font-weight: 500;
+        }
+        
+        .status-recommended {
+            background: rgba(52, 199, 89, 0.2);
+            color: #34C759;
+        }
+        
+        .status-alternative {
+            background: rgba(255, 159, 10, 0.2);
+            color: #FF9F0A;
+        }
+        
+        .input-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .input-section.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .input-field.error {
+            border-color: #ff4757;
+        }
+        
+        .input-hint {
+            font-size: 12px;
+            color: #888;
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: rgba(0, 0, 0, 0.05);
+            color: #666;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .status-indicator.show {
+            transform: translateX(0);
+        }
+        
+        .status-success {
+            background: rgba(52, 199, 89, 0.9);
+            color: white;
+        }
+        
+        .status-error {
+            background: rgba(255, 71, 87, 0.9);
+            color: white;
+        }
+        
+        .loading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+        
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid transparent;
+            border-top: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="header">
+            <h1>🧚‍♀️ Claude SDK 인증 설정</h1>
+            <p>Fairy Assistant가 Claude와 대화하기 위한 인증 방법을 선택해주세요</p>
+        </div>
+        
+        <div class="auth-methods">
+            <!-- Claude Pro/Team 구독 방식 -->
+            <div class="auth-method" id="subscriptionMethod" onclick="selectMethod('subscription')">
+                <div class="method-title">
+                    <span class="method-icon">👑</span>
+                    Claude Pro/Team 구독
+                </div>
+                <div class="method-description">
+                    Claude Pro 또는 Team 구독이 있는 경우 브라우저 로그인으로 인증합니다.
+                    가장 편리하고 안정적인 방법입니다.
+                </div>
+                <div class="method-status status-recommended">권장</div>
+            </div>
+            
+            <!-- Anthropic API 키 방식 -->
+            <div class="auth-method" id="apiKeyMethod" onclick="selectMethod('apikey')">
+                <div class="method-title">
+                    <span class="method-icon">🔑</span>
+                    Anthropic API 키
+                </div>
+                <div class="method-description">
+                    Anthropic Console에서 발급받은 API 키를 직접 입력합니다.
+                    구독이 없거나 독립적으로 관리하고 싶을 때 사용합니다.
+                </div>
+                <div class="method-status status-alternative">대안</div>
+            </div>
+        </div>
+        
+        <!-- API 키 입력 섹션 -->
+        <div class="input-section" id="apiKeySection">
+            <div class="input-group">
+                <label class="input-label" for="apiKeyInput">API 키</label>
+                <input 
+                    type="password" 
+                    id="apiKeyInput" 
+                    class="input-field" 
+                    placeholder="sk-ant-api03-..."
+                    autocomplete="off"
+                >
+                <div class="input-hint">
+                    Anthropic Console (console.anthropic.com)에서 발급받은 API 키를 입력하세요.
+                    키는 안전하게 암호화되어 로컬에 저장됩니다.
+                </div>
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button class="btn btn-secondary" onclick="cancel()">취소</button>
+            <button class="btn btn-primary" id="confirmBtn" onclick="confirm()">설정 완료</button>
+        </div>
+    </div>
+    
+    <div class="status-indicator" id="statusIndicator"></div>
+    
+    <script>
+        let selectedMethod = null;
+        
+        function selectMethod(method) {
+            selectedMethod = method;
+            
+            // 모든 메소드에서 selected 클래스 제거
+            document.querySelectorAll('.auth-method').forEach(el => {
+                el.classList.remove('selected');
+            });
+            
+            // 선택된 메소드에 selected 클래스 추가
+            const selectedElement = document.getElementById(method + 'Method');
+            selectedElement.classList.add('selected');
+            
+            // API 키 입력 섹션 표시/숨김
+            const apiKeySection = document.getElementById('apiKeySection');
+            if (method === 'apikey') {
+                apiKeySection.classList.add('show');
+            } else {
+                apiKeySection.classList.remove('show');
+            }
+            
+            console.log('선택된 인증 방식:', method);
+        }
+        
+        function showStatus(message, type) {
+            const indicator = document.getElementById('statusIndicator');
+            indicator.textContent = message;
+            indicator.className = `status-indicator status-${type} show`;
+            
+            setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 3000);
+        }
+        
+        async function confirm() {
+            if (!selectedMethod) {
+                showStatus('인증 방식을 선택해주세요', 'error');
+                return;
+            }
+            
+            const confirmBtn = document.getElementById('confirmBtn');
+            confirmBtn.classList.add('loading');
+            
+            try {
+                if (selectedMethod === 'subscription') {
+                    await handleSubscriptionAuth();
+                } else if (selectedMethod === 'apikey') {
+                    await handleApiKeyAuth();
+                }
+            } catch (error) {
+                console.error('인증 설정 오류:', error);
+                showStatus('설정 중 오류가 발생했습니다', 'error');
+            } finally {
+                confirmBtn.classList.remove('loading');
+            }
+        }
+        
+        async function handleSubscriptionAuth() {
+            console.log('Claude 구독 인증 처리...');
+            
+            // 실제 구현: claude auth login 실행
+            // Python Bridge를 통해 CLI 명령 실행
+            const response = await fetch('http://localhost:8766/api/auth/subscription', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            if (response.ok) {
+                showStatus('구독 인증이 완료되었습니다', 'success');
+                setTimeout(() => window.close(), 2000);
+            } else {
+                showStatus('구독 인증에 실패했습니다', 'error');
+            }
+        }
+        
+        async function handleApiKeyAuth() {
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            
+            if (!apiKey) {
+                showStatus('API 키를 입력해주세요', 'error');
+                document.getElementById('apiKeyInput').classList.add('error');
+                return;
+            }
+            
+            if (!apiKey.startsWith('sk-ant-api')) {
+                showStatus('올바른 API 키 형식이 아닙니다', 'error');
+                document.getElementById('apiKeyInput').classList.add('error');
+                return;
+            }
+            
+            document.getElementById('apiKeyInput').classList.remove('error');
+            
+            console.log('API 키 인증 처리...');
+            
+            // 실제 구현: API 키 검증 및 저장
+            const response = await fetch('http://localhost:8766/api/auth/apikey', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ apiKey })
+            });
+            
+            if (response.ok) {
+                showStatus('API 키가 설정되었습니다', 'success');
+                setTimeout(() => window.close(), 2000);
+            } else {
+                showStatus('API 키 검증에 실패했습니다', 'error');
+            }
+        }
+        
+        function cancel() {
+            window.close();
+        }
+        
+        // 초기화
+        console.log('🔑 Claude SDK 인증 설정 페이지 로드 완료');
+    </script>
+</body>
+</html>

@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Fairy Character</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: transparent;
+            overflow: hidden;
+            user-select: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        .fairy-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            width: 160px;
+            height: 160px;
+        }
+        
+        /* 말풍선 전용 상단 영역 */
+        .speech-area {
+            position: relative;
+            width: 100%;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            pointer-events: none; /* 기본적으로 투과 */
+        }
+        
+        .speech-area.active {
+            pointer-events: auto; /* 말풍선이 있을 때만 클릭 가능 */
+        }
+        
+        /* 요정 전용 하단 영역 */
+        .fairy-area {
+            position: relative;
+            width: 100%;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* 🧚‍♀️ 요정 캐릭터 */
+        .fairy {
+            font-size: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.3s ease;
+            animation: fairyFloat 3s ease-in-out infinite;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+        }
+        
+        /* 요정 주변 마법 효과 */
+        .magic-sparkle {
+            position: absolute;
+            pointer-events: none;
+            animation: sparkle 4s linear infinite;
+            opacity: 0;
+        }
+        
+        .sparkle-1 {
+            top: -10px;
+            left: -10px;
+            animation-delay: 0s;
+        }
+        
+        .sparkle-2 {
+            top: -5px;
+            right: -10px;
+            animation-delay: 1s;
+        }
+        
+        .sparkle-3 {
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation-delay: 2s;
+        }
+        
+        .sparkle-4 {
+            top: 50%;
+            right: -15px;
+            transform: translateY(-50%);
+            animation-delay: 3s;
+        }
+        
+        /* 말풍선 - 상단 영역에 중앙 배치 */
+        .speech-bubble {
+            position: relative;
+            background: #E6F3FF !important;
+            border: 2px solid #1E3A8A !important;
+            border-radius: 15px;
+            padding: 8px 12px;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            color: #1E3A8A !important;
+            white-space: normal;
+            word-wrap: break-word;
+            word-break: keep-all;
+            line-height: 1.4;
+            min-width: 80px;
+            max-width: 250px;
+            opacity: 0;
+            text-align: center;
+            transition: opacity 0.3s ease;
+            z-index: 9999 !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            margin-bottom: 8px;
+        }
+        
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border: 6px solid transparent;
+            border-top-color: #FF69B4;
+        }
+        
+        .speech-bubble::before {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border: 4px solid transparent;
+            border-top-color: #FFB6C1;
+            z-index: 1;
+            margin-top: -2px;
+        }
+        
+        .speech-bubble.show {
+            opacity: 1;
+        }
+        
+        /* 애니메이션들 */
+        @keyframes fairyFloat {
+            0%, 100% { 
+                transform: translateY(0px) rotate(-2deg); 
+            }
+            33% { 
+                transform: translateY(-8px) rotate(0deg); 
+            }
+            66% { 
+                transform: translateY(-4px) rotate(2deg); 
+            }
+        }
+        
+        @keyframes sparkle {
+            0%, 20%, 80%, 100% {
+                opacity: 0;
+                transform: scale(0) rotate(0deg);
+            }
+            40%, 60% {
+                opacity: 1;
+                transform: scale(1) rotate(180deg);
+            }
+        }
+        
+        /* 호버 효과 */
+        .fairy-container:hover .fairy {
+            transform: translateY(-5px) scale(1.1) rotate(5deg);
+            animation-duration: 1s;
+        }
+        
+        .fairy-container:hover .magic-sparkle {
+            animation-duration: 2s;
+        }
+        
+        /* 클릭 효과 */
+        .fairy-container:active .fairy {
+            transform: translateY(2px) scale(0.95);
+        }
+        
+        /* 상태별 요정 모습 */
+        .fairy.happy::after {
+            content: '✨';
+            position: absolute;
+            top: -10px;
+            right: -5px;
+            font-size: 16px;
+            animation: happySparkle 1s ease-out;
+        }
+        
+        @keyframes happySparkle {
+            0% { opacity: 0; transform: scale(0) rotate(0deg); }
+            50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
+            100% { opacity: 0; transform: scale(0.8) rotate(360deg); }
+        }
+        
+        /* 컨텍스트 메뉴 스타일 */
+        .context-menu {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 8px;
+            min-width: 180px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 182, 193, 0.3);
+            z-index: 10001;
+            opacity: 0;
+            visibility: hidden;
+            transform: scale(0.9) translateY(-10px);
+            transition: all 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            user-select: none;
+        }
+        
+        .context-menu.show {
+            opacity: 1;
+            visibility: visible;
+            transform: scale(1) translateY(0);
+        }
+        
+        .context-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .context-item:hover {
+            background: rgba(255, 105, 180, 0.15);
+            color: #FF69B4;
+            transform: translateX(2px);
+        }
+        
+        .context-item .icon {
+            margin-right: 10px;
+            font-size: 16px;
+            width: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .context-item .text {
+            flex: 1;
+        }
+        
+        .context-divider {
+            height: 1px;
+            background: rgba(255, 105, 180, 0.2);
+            margin: 6px 8px;
+        }
+        
+        .context-item:active {
+            transform: translateX(2px) scale(0.98);
+        }
+    </style>
+</head>
+<body>
+    <div class="fairy-container">
+        <!-- 상단 말풍선 전용 영역 -->
+        <div class="speech-area" id="speechArea" onclick="hideSpeechBubble()">
+            <div class="speech-bubble" id="speechBubble">안녕하세요! 🧚‍♀️</div>
+        </div>
+        
+        <!-- 하단 요정 전용 영역 -->
+        <div class="fairy-area" 
+             onmousedown="fairyMouseDown(event)" 
+             onmousemove="fairyMouseMove(event)" 
+             onmouseup="fairyMouseUp(event)" 
+             onmouseleave="fairyMouseLeave(event)"
+             oncontextmenu="showContextMenu(event)">
+            <div class="fairy" id="fairy">🧚‍♀️</div>
+            
+            <!-- 마법 반짝이 효과 -->
+            <div class="magic-sparkle sparkle-1">✨</div>
+            <div class="magic-sparkle sparkle-2">⭐</div>
+            <div class="magic-sparkle sparkle-3">💫</div>
+            <div class="magic-sparkle sparkle-4">✨</div>
+        </div>
+    </div>
+    
+    <!-- 컨텍스트 메뉴 -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-item" onclick="openChatWindow()">
+            <span class="icon">💬</span>
+            <span class="text">채팅하기</span>
+        </div>
+        <div class="context-item" onclick="openSettings()">
+            <span class="icon">⚙️</span>
+            <span class="text">설정</span>
+        </div>
+        <div class="context-item" onclick="openCustomization()">
+            <span class="icon">🎨</span>
+            <span class="text">커스터마이징</span>
+        </div>
+        <div class="context-divider"></div>
+        <div class="context-item" onclick="togglePause()">
+            <span class="icon">⏸️</span>
+            <span class="text">일시정지</span>
+        </div>
+        <div class="context-item" onclick="showAbout()">
+            <span class="icon">ℹ️</span>
+            <span class="text">정보</span>
+        </div>
+    </div>
+    
+    <script>
+        const fairy = document.getElementById('fairy');
+        const speechBubble = document.getElementById('speechBubble');
+        const speechArea = document.getElementById('speechArea');
+        const contextMenu = document.getElementById('contextMenu');
+        
+        // 전역 상수
+        const FAIRY_SIZE = { width: 160, height: 160 };
+        
+        const greetings = [
+            "안녕하세요! 🧚‍♀️",
+            "무엇을 도와드릴까요? ✨",
+            "좋은 하루예요! 🌟",
+            "저는 당신의 AI 비서에요! 💖",
+            "함께 일해요! 🎉",
+            "마법같은 하루 되세요! ✨"
+        ];
+        
+        // 드래그 및 쓰다듬기 상태 관리
+        let mouseState = {
+            isPressed: false,
+            startTime: 0,
+            startX: 0,
+            startY: 0,
+            currentX: 0,
+            currentY: 0,
+            moveDistance: 0,
+            isHoldStill: false,
+            isDragging: false,
+            isPetting: false,
+            holdTimer: null,
+            movements: []
+        };
+        
+        function fairyClicked() {
+            console.log('🧚‍♀️ 요정을 클릭했습니다!');
+            
+            // 랜덤 인사말
+            const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+            speechBubble.textContent = randomGreeting;
+            
+            // 말풍선 표시 및 상단 영역 활성화
+            speechBubble.classList.add('show');
+            speechBubble.style.opacity = '1';
+            speechArea.classList.add('active');
+            
+            // 요정 기쁜 상태
+            fairy.classList.add('happy');
+            
+            // 5초 후 자동으로 말풍선 숨기기
+            setTimeout(() => {
+                hideSpeechBubble();
+            }, 5000);
+            
+            console.log('🎵 *반짝반짝* 효과음');
+        }
+        
+        function hideSpeechBubble() {
+            console.log('말풍선 숨기기');
+            speechBubble.classList.remove('show');
+            speechBubble.style.opacity = '0';
+            speechArea.classList.remove('active'); // 상단 영역 비활성화 (투과 모드)
+            fairy.classList.remove('happy');
+        }
+        
+        // 드래그 & 쓰다듬기 기능
+        function fairyMouseDown(event) {
+            event.preventDefault();
+            mouseState.isPressed = true;
+            mouseState.startTime = Date.now();
+            mouseState.startX = event.clientX;
+            mouseState.startY = event.clientY;
+            mouseState.currentX = event.clientX;
+            mouseState.currentY = event.clientY;
+            mouseState.moveDistance = 0;
+            mouseState.movements = [];
+            
+            // 1초 후 처음 클릭 위치 기준으로 가만히 있는지 체크
+            mouseState.holdTimer = setTimeout(() => {
+                const distanceFromStart = Math.sqrt(
+                    Math.pow(mouseState.currentX - mouseState.startX, 2) + 
+                    Math.pow(mouseState.currentY - mouseState.startY, 2)
+                );
+                
+                if (mouseState.isPressed && distanceFromStart <= 15) {
+                    mouseState.isHoldStill = true;
+                    mouseState.isDragging = true;
+                    
+                    // 요정 들어올리기 - 커서를 따라다니기 시작
+                    fairy.style.transform = 'scale(1.1) translateY(-10px) rotate(-5deg)';
+                    fairy.style.filter = 'drop-shadow(0 8px 16px rgba(0,0,0,0.4))';
+                    fairy.style.zIndex = '10000';
+                    
+                    console.log('🫱 요정 드래그 모드 시작! 커서를 따라다님');
+                    
+                    // 자동 돌아다니기 즉시 중지 (main.js의 FairySystem 일시정지 신호)
+                    if (window.fairySystem) {
+                        window.fairySystem.pauseMovement();
+                    }
+                }
+            }, 1000);
+            
+            console.log('🖱️ 마우스 다운');
+        }
+        
+        function fairyMouseMove(event) {
+            if (!mouseState.isPressed) return;
+            
+            mouseState.currentX = event.clientX;
+            mouseState.currentY = event.clientY;
+            
+            // 시작점 기준 이동 거리 계산
+            const deltaX = mouseState.currentX - mouseState.startX;
+            const deltaY = mouseState.currentY - mouseState.startY;
+            mouseState.moveDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            
+            // 움직임 히스토리 저장 (최근 10개)
+            mouseState.movements.push({
+                x: mouseState.currentX,
+                y: mouseState.currentY,
+                time: Date.now()
+            });
+            if (mouseState.movements.length > 10) {
+                mouseState.movements.shift();
+            }
+            
+            // 시작점에서 20픽셀 이상 멀어지면 가만히 있기 상태 해제
+            if (mouseState.moveDistance > 20) {
+                if (mouseState.holdTimer) {
+                    clearTimeout(mouseState.holdTimer);
+                    mouseState.holdTimer = null;
+                }
+                mouseState.isHoldStill = false;
+                
+                // 드래그 모드 판정 - 빠른 움직임이거나 큰 움직임인 경우
+                const currentTime = Date.now();
+                const timeDiff = currentTime - mouseState.startTime;
+                const speed = mouseState.moveDistance / timeDiff; // 픽셀/ms
+                
+                // 빠른 움직임(0.5 픽셀/ms 이상) 또는 큰 움직임(50픽셀 이상)이면 드래그 모드
+                if (!mouseState.isDragging && mouseState.isPressed && 
+                    (speed > 0.5 || mouseState.moveDistance > 50)) {
+                    
+                    mouseState.isDragging = true;
+                    
+                    // 요정 들어올리기
+                    fairy.style.transform = 'scale(1.1) translateY(-10px) rotate(-5deg)';
+                    fairy.style.filter = 'drop-shadow(0 8px 16px rgba(0,0,0,0.4))';
+                    fairy.style.zIndex = '10000';
+                    
+                    console.log('🫱 요정 드래그 모드 시작! (속도:', speed, ', 거리:', mouseState.moveDistance, ')');
+                    
+                    // 자동 돌아다니기 즉시 중지
+                    if (window.fairySystem) {
+                        window.fairySystem.pauseMovement();
+                    }
+                }
+                
+                // 드래그 모드인 경우 - 실제 드래그 수행
+                if (mouseState.isDragging) {
+                    // 윈도우를 커서 위치로 이동 (전역 스크린 좌표 기준)
+                    const screenX = event.screenX - FAIRY_SIZE.width / 2;
+                    const screenY = event.screenY - FAIRY_SIZE.height / 2;
+                    
+                    console.log('🖱️ 드래그 중... 스크린 위치:', screenX, screenY);
+                    
+                    // Electron main process로 윈도우 이동 요청
+                    if (window.electronAPI) {
+                        window.electronAPI.moveWindow(screenX, screenY);
+                    }
+                }
+                
+                // 쓰다듬기 감지 - 드래그 모드가 아닐 때만 활성화
+                if (!mouseState.isDragging && mouseState.movements.length >= 5) {
+                    const recentMoves = mouseState.movements.slice(-5);
+                    const totalMovement = recentMoves.reduce((sum, move, index) => {
+                        if (index === 0) return sum;
+                        const prev = recentMoves[index - 1];
+                        const dist = Math.sqrt(
+                            Math.pow(move.x - prev.x, 2) + Math.pow(move.y - prev.y, 2)
+                        );
+                        return sum + dist;
+                    }, 0);
+                    
+                    // 적당한 움직임량이면 쓰다듬기로 인식 (드래그가 아닐 때만)
+                    if (totalMovement > 10 && totalMovement < 50 && !mouseState.isPetting) {
+                        mouseState.isPetting = true;
+                        console.log('✋ 쓰다듬기 감지!');
+                        
+                        // 쓰다듬기 반응
+                        fairy.classList.add('happy');
+                        showPettingMessage();
+                        
+                        // 0.5초 후 쓰다듬기 상태 리셋
+                        setTimeout(() => {
+                            mouseState.isPetting = false;
+                        }, 500);
+                    }
+                }
+            }
+        }
+        
+        function fairyMouseUp(event) {
+            if (!mouseState.isPressed) return;
+            
+            const holdDuration = Date.now() - mouseState.startTime;
+            
+            // 시작점 기준으로 5픽셀 이내에서 1초 이상 있었음 = 드래그 시작
+            const finalDistance = Math.sqrt(
+                Math.pow(mouseState.currentX - mouseState.startX, 2) + 
+                Math.pow(mouseState.currentY - mouseState.startY, 2)
+            );
+            
+            // 드래그 중이면 전역 이벤트가 처리하므로 여기서는 스킵
+            if (mouseState.isDragging) {
+                console.log('🫱 드래그 중이므로 전역 이벤트가 처리합니다.');
+                return;
+            }
+            
+            // 짧은 클릭 (드래그나 쓰다듬기가 아닌 경우) - 시작점 기준
+            if (holdDuration < 500 && finalDistance <= 5 && !mouseState.isPetting) {
+                // 원래 클릭 이벤트 실행
+                fairyClicked();
+            }
+            
+            // 상태 리셋
+            resetMouseState();
+        }
+        
+        function fairyMouseLeave(event) {
+            console.log('🖱️ 마우스 영역 벗어남');
+            // 드래그 중이면 리셋하지 않음 - 드래그 계속 진행
+            if (!mouseState.isDragging) {
+                resetMouseState();
+            }
+        }
+        
+        function resetMouseState() {
+            if (mouseState.holdTimer) {
+                clearTimeout(mouseState.holdTimer);
+                mouseState.holdTimer = null;
+            }
+            
+            mouseState.isPressed = false;
+            mouseState.isHoldStill = false;
+            mouseState.isDragging = false;
+            mouseState.isPetting = false;
+            
+            // 비주얼 상태 리셋
+            fairy.style.transform = '';
+            fairy.style.filter = 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))';
+            fairy.style.zIndex = '';
+            
+            // 자동 돌아다니기 재개 (만약 일시정지되어 있었다면)
+            if (window.fairySystem) {
+                window.fairySystem.resumeMovement();
+            }
+            
+            console.log('🔄 마우스 상태 리셋');
+        }
+        
+        function showPettingMessage() {
+            const pettingMessages = ["기분 좋아요! 💕", "더 해주세요! ✨", "고마워요! 🥰", "행복해요! 💖"];
+            const randomMessage = pettingMessages[Math.floor(Math.random() * pettingMessages.length)];
+            
+            speechBubble.textContent = randomMessage;
+            speechBubble.classList.add('show');
+            speechBubble.style.opacity = '1';
+            speechArea.classList.add('active');
+            
+            setTimeout(() => {
+                hideSpeechBubble();
+            }, 2000);
+        }
+        
+        function showLandMessage() {
+            const landMessages = ["새 집이에요! 🏠", "여기가 좋아요! ✨", "착지 완료! 🧚‍♀️", "이곳으로 이사왔어요! 🎉"];
+            const randomMessage = landMessages[Math.floor(Math.random() * landMessages.length)];
+            
+            speechBubble.textContent = randomMessage;
+            speechBubble.classList.add('show');
+            speechBubble.style.opacity = '1';
+            speechArea.classList.add('active');
+            
+            setTimeout(() => {
+                hideSpeechBubble();
+            }, 3000);
+        }
+        
+        function showDragMessage() {
+            speechBubble.textContent = "드래그해서 옮겨주세요! 🫱";
+            speechBubble.classList.add('show');
+            speechBubble.style.opacity = '1';
+            speechArea.classList.add('active');
+            
+            setTimeout(() => {
+                hideSpeechBubble();
+            }, 3000);
+        }
+        
+        // 전역 드래그 이벤트 리스너 (요정 영역을 벗어나도 드래그 계속)
+        document.addEventListener('mousemove', function(event) {
+            if (mouseState.isDragging) {
+                // 드래그 중이면 계속 위치 업데이트
+                mouseState.currentX = event.clientX;
+                mouseState.currentY = event.clientY;
+                
+                // 윈도우를 커서 위치로 이동
+                const screenX = event.screenX - FAIRY_SIZE.width / 2;
+                const screenY = event.screenY - FAIRY_SIZE.height / 2;
+                
+                console.log('🖱️ 전역 드래그 중... 스크린 위치:', screenX, screenY);
+                
+                if (window.electronAPI) {
+                    window.electronAPI.moveWindow(screenX, screenY);
+                }
+            }
+        });
+
+        document.addEventListener('mouseup', function(event) {
+            if (mouseState.isDragging) {
+                // 전역 마우스업에서 드래그 종료
+                const finalScreenX = event.screenX - FAIRY_SIZE.width / 2;
+                const finalScreenY = event.screenY - FAIRY_SIZE.height / 2;
+                
+                console.log('🫱 전역 드래그 완료! 새 위치:', finalScreenX, finalScreenY);
+                
+                // FairySystem에 새 위치 업데이트
+                if (window.fairySystem) {
+                    window.fairySystem.setNewPosition(finalScreenX, finalScreenY);
+                    window.fairySystem.resumeMovement();
+                }
+                
+                // 요정 착지 메시지
+                showLandMessage();
+                
+                // 상태 리셋
+                resetMouseState();
+            }
+        });
+
+        // 컨텍스트 메뉴 관련 함수들
+        function showContextMenu(event) {
+            event.preventDefault();
+            
+            // 현재 요정 위치 가져오기 (스크린 좌표)
+            const fairyRect = fairy.getBoundingClientRect();
+            const fairyScreenX = event.screenX - event.clientX + fairyRect.left;
+            const fairyScreenY = event.screenY - event.clientY + fairyRect.top;
+            
+            console.log('🧚‍♀️ 요정 우클릭 - 채팅 입력창 토글:', fairyScreenX, fairyScreenY);
+            
+            // Electron main process에 채팅 입력창 토글 요청
+            if (require) {
+                require('electron').ipcRenderer.send('toggle-fairy-chat', fairyScreenX, fairyScreenY);
+            }
+            
+            // 피드백 메시지
+            speechBubble.textContent = "채팅 모드 전환! 💬";
+            showSpeechBubble();
+        }
+        
+        function hideContextMenu() {
+            contextMenu.classList.remove('show');
+            console.log('❌ 컨텍스트 메뉴 숨김');
+        }
+        
+        // 메뉴 항목 클릭 이벤트들
+        function openChatWindow() {
+            hideContextMenu();
+            console.log('💬 채팅 창 열기');
+            
+            // Electron main process에 채팅 창 열기 요청
+            if (require) {
+                require('electron').ipcRenderer.send('open-chat-window');
+                
+                // 성공 피드백
+                speechBubble.textContent = "채팅 창을 열었어요! 💬";
+                speechBubble.classList.add('show');
+                speechBubble.style.opacity = '1';
+                speechArea.classList.add('active');
+                
+                setTimeout(() => hideSpeechBubble(), 2000);
+            } else {
+                console.error('Electron API를 사용할 수 없습니다');
+                speechBubble.textContent = "채팅 창 열기에 실패했어요 😅";
+                speechBubble.classList.add('show');
+                speechBubble.style.opacity = '1';
+                speechArea.classList.add('active');
+                
+                setTimeout(() => hideSpeechBubble(), 3000);
+            }
+        }
+        
+        function openSettings() {
+            hideContextMenu();
+            console.log('⚙️ 설정 창 열기');
+            
+            speechBubble.textContent = "설정 창을 준비 중이에요! ⚙️";
+            speechBubble.classList.add('show');
+            speechBubble.style.opacity = '1';
+            speechArea.classList.add('active');
+            
+            setTimeout(() => hideSpeechBubble(), 3000);
+        }
+        
+        function openCustomization() {
+            hideContextMenu();
+            console.log('🎨 커스터마이징 창 열기');
+            
+            speechBubble.textContent = "꾸미기 메뉴를 준비 중이에요! 🎨";
+            speechBubble.classList.add('show');
+            speechBubble.style.opacity = '1';
+            speechArea.classList.add('active');
+            
+            setTimeout(() => hideSpeechBubble(), 3000);
+        }
+        
+        function togglePause() {
+            hideContextMenu();
+            
+            if (window.fairySystem) {
+                // 일시정지/재개 토글
+                if (window.fairySystem.isPaused) {
+                    window.fairySystem.resumeMovement();
+                    speechBubble.textContent = "다시 활동할게요! 🏃‍♀️";
+                } else {
+                    window.fairySystem.pauseMovement();
+                    speechBubble.textContent = "잠깐 쉴게요! 😴";
+                }
+                
+                speechBubble.classList.add('show');
+                speechBubble.style.opacity = '1';
+                speechArea.classList.add('active');
+                
+                setTimeout(() => hideSpeechBubble(), 2000);
+            }
+        }
+        
+        function showAbout() {
+            hideContextMenu();
+            console.log('ℹ️ 정보 창 열기');
+            
+            speechBubble.textContent = "Fairy Assistant v1.0 🧚‍♀️✨";
+            speechBubble.classList.add('show');
+            speechBubble.style.opacity = '1';
+            speechArea.classList.add('active');
+            
+            setTimeout(() => hideSpeechBubble(), 4000);
+        }
+        
+        // 전역 클릭으로 컨텍스트 메뉴 숨기기
+        document.addEventListener('click', function(event) {
+            if (!contextMenu.contains(event.target)) {
+                hideContextMenu();
+            }
+        });
+        
+        // 채팅창 상태 관리
+        window.isChatInputOpen = false;
+        
+        // IPC 통신으로 채팅창 상태 받기
+        if (typeof require !== 'undefined') {
+            const { ipcRenderer } = require('electron');
+            
+            // 채팅창 열림/닫힘 상태 수신
+            ipcRenderer.on('chat-input-opened', () => {
+                window.isChatInputOpen = true;
+                console.log('💬 채팅창 열림 - 주기적 인사 일시정지');
+            });
+            
+            ipcRenderer.on('chat-input-closed', () => {
+                window.isChatInputOpen = false;
+                console.log('💬 채팅창 닫힘 - 주기적 인사 재개');
+            });
+            
+            // Claude 응답을 별도 창 말풍선에 표시 요청
+            ipcRenderer.on('show-claude-response', (event, message) => {
+                // main.js에 별도 창 말풍선 생성 요청
+                ipcRenderer.send('create-internal-speech-bubble', message);
+                console.log('💬 Claude 응답을 별도 창으로 표시 요청:', message);
+            });
+        }
+        
+        // 요정 초기화
+        console.log('🧚‍♀️ Fairy Character 로드 완료!');
+        
+        // 15초마다 자동으로 인사 (채팅창이 열려있을 때는 중단)
+        let periodicGreetingInterval = setInterval(() => {
+            // 채팅창이 열려있으면 주기적 인사 중단
+            if (window.isChatInputOpen) {
+                return;
+            }
+            
+            if (!speechBubble.classList.contains('show')) {
+                const autoGreeting = ["✨", "💖", "🌟", "🎀"][Math.floor(Math.random() * 4)];
+                
+                // 자동 이모티콘 표시 (짧게)
+                speechBubble.textContent = autoGreeting;
+                speechBubble.classList.add('show');
+                speechBubble.style.opacity = '1';
+                speechArea.classList.add('active'); // 상단 영역 활성화
+                
+                setTimeout(() => {
+                    hideSpeechBubble();
+                }, 3000);
+            }
+        }, 15000);
+    </script>
+</body>
+</html>

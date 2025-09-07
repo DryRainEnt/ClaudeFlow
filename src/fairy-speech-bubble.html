@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>요정 말풍선</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+        
+        .speech-bubble {
+            position: relative;
+            background: rgba(252, 231, 243, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 12px 16px;
+            max-width: 280px;
+            min-width: 120px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            border: 2px solid rgba(219, 112, 147, 0.4);
+            animation: bubbleAppear 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            word-wrap: break-word;
+            word-break: keep-all;
+            line-height: 1.4;
+        }
+        
+        .speech-bubble.thinking {
+            background: rgba(255, 249, 196, 0.95);
+            border-color: rgba(255, 193, 7, 0.5);
+        }
+        
+        .speech-bubble.happy {
+            background: rgba(212, 237, 218, 0.95);
+            border-color: rgba(40, 167, 69, 0.5);
+            animation: happyBounce 0.6s ease;
+        }
+        
+        .speech-bubble.error {
+            background: rgba(248, 215, 218, 0.95);
+            border-color: rgba(220, 53, 69, 0.5);
+        }
+        
+        .speech-text {
+            font-size: 14px;
+            color: #333;
+            text-align: left;
+        }
+        
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border: 10px solid transparent;
+            border-top-color: rgba(252, 231, 243, 0.95);
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+        
+        .speech-bubble.thinking::after {
+            border-top-color: rgba(255, 249, 196, 0.95);
+        }
+        
+        .speech-bubble.happy::after {
+            border-top-color: rgba(212, 237, 218, 0.95);
+        }
+        
+        .speech-bubble.error::after {
+            border-top-color: rgba(248, 215, 218, 0.95);
+        }
+        
+        /* 타이핑 인디케이터 */
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: #888;
+        }
+        
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #888;
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite ease-in-out both;
+        }
+        
+        .typing-dot:nth-child(2) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(3) { animation-delay: -0.16s; }
+        .typing-dot:nth-child(4) { animation-delay: 0s; }
+        
+        @keyframes bubbleAppear {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        @keyframes happyBounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-8px); }
+            60% { transform: translateY(-4px); }
+        }
+        
+        @keyframes typingBounce {
+            0%, 80%, 100% { 
+                transform: scale(0.8); 
+                opacity: 0.5; 
+            }
+            40% { 
+                transform: scale(1.2); 
+                opacity: 1; 
+            }
+        }
+        
+        /* 긴 텍스트 애니메이션 */
+        .speech-text.typing {
+            border-right: 2px solid #667eea;
+            white-space: nowrap;
+            overflow: hidden;
+            animation: typing 0.05s steps(1, end);
+        }
+        
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+        
+        /* 이모지 애니메이션 */
+        .emoji {
+            display: inline-block;
+            animation: emojiFloat 2s ease-in-out infinite;
+        }
+        
+        @keyframes emojiFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-2px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="speech-bubble" id="speechBubble">
+        <div class="speech-text" id="speechText">안녕하세요! 🧚‍♀️</div>
+    </div>
+    
+    <script>
+        const speechBubble = document.getElementById('speechBubble');
+        const speechText = document.getElementById('speechText');
+        
+        // URL에서 메시지 파라미터 받기
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialMessage = decodeURIComponent(urlParams.get('message') || '안녕하세요! 🧚‍♀️');
+        const bubbleType = urlParams.get('type') || 'normal';
+        
+        // 초기 메시지 설정
+        speechText.innerHTML = formatMessage(initialMessage);
+        speechBubble.className = `speech-bubble ${bubbleType}`;
+        
+        function formatMessage(message) {
+            // 이모지에 애니메이션 클래스 추가
+            return message.replace(/(\u{1F600}-\u{1F64F}|\u{1F300}-\u{1F5FF}|\u{1F680}-\u{1F6FF}|\u{1F1E0}-\u{1F1FF}|\u{2600}-\u{26FF}|\u{2700}-\u{27BF})/gu, 
+                '<span class="emoji">$1</span>');
+        }
+        
+        // 타이핑 인디케이터 표시
+        function showTypingIndicator() {
+            speechBubble.className = 'speech-bubble thinking';
+            speechText.innerHTML = `
+                <div class="typing-indicator">
+                    생각 중
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            `;
+        }
+        
+        // 메시지 업데이트
+        function updateMessage(message, type = 'normal') {
+            speechBubble.className = `speech-bubble ${type}`;
+            
+            // 긴 메시지는 타이핑 효과
+            if (message.length > 50) {
+                typeMessage(message);
+            } else {
+                speechText.innerHTML = formatMessage(message);
+            }
+            
+            console.log('💬 말풍선 업데이트:', message);
+        }
+        
+        // 타이핑 애니메이션
+        function typeMessage(message) {
+            speechText.innerHTML = '';
+            speechText.classList.add('typing');
+            
+            let i = 0;
+            const typingSpeed = 30; // ms per character
+            
+            function typeChar() {
+                if (i < message.length) {
+                    speechText.innerHTML += message.charAt(i);
+                    i++;
+                    setTimeout(typeChar, typingSpeed);
+                } else {
+                    speechText.classList.remove('typing');
+                    speechText.innerHTML = formatMessage(message);
+                }
+            }
+            
+            typeChar();
+        }
+        
+        // Electron main process로부터 메시지 업데이트 받기
+        if (typeof require !== 'undefined') {
+            const { ipcRenderer } = require('electron');
+            
+            ipcRenderer.on('update-speech', (event, message, type) => {
+                updateMessage(message, type);
+            });
+            
+            ipcRenderer.on('show-typing', () => {
+                showTypingIndicator();
+            });
+        }
+        
+        // 5초 후 자동 닫기 (타이머)
+        let autoCloseTimer = null;
+        
+        function startAutoCloseTimer() {
+            if (autoCloseTimer) {
+                clearTimeout(autoCloseTimer);
+            }
+            
+            autoCloseTimer = setTimeout(() => {
+                window.close();
+            }, 8000); // 8초 후 자동 닫기
+        }
+        
+        // 마우스 호버시 타이머 일시정지
+        speechBubble.addEventListener('mouseenter', () => {
+            if (autoCloseTimer) {
+                clearTimeout(autoCloseTimer);
+            }
+        });
+        
+        speechBubble.addEventListener('mouseleave', () => {
+            startAutoCloseTimer();
+        });
+        
+        // 자동 닫기 타이머 시작
+        startAutoCloseTimer();
+        
+        console.log('💬 요정 말풍선 로드 완료!', initialMessage);
+    </script>
+</body>
+</html>

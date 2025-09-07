@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>요정과 채팅하기</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .chat-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .close-btn {
+            background: rgba(255, 71, 87, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #ff4757;
+            transition: all 0.3s ease;
+        }
+        
+        .close-btn:hover {
+            background: rgba(255, 71, 87, 0.2);
+            transform: scale(1.1);
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+            animation: messageSlide 0.3s ease;
+        }
+        
+        .message.user {
+            align-self: flex-end;
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+            border-bottom-right-radius: 6px;
+        }
+        
+        .message.fairy {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            border-bottom-left-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .message.typing {
+            background: rgba(255, 255, 255, 0.95);
+            color: #888;
+            align-self: flex-start;
+        }
+        
+        .typing-indicator {
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+        }
+        
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #888;
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite ease-in-out both;
+        }
+        
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        .typing-dot:nth-child(3) { animation-delay: 0s; }
+        
+        .chat-input-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 15px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .chat-input-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        
+        .chat-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.8);
+            border: 2px solid #e0e0e0;
+            border-radius: 22px;
+            padding: 12px 16px;
+            font-size: 14px;
+            resize: none;
+            max-height: 100px;
+            min-height: 44px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        .chat-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .input-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .input-btn {
+            width: 44px;
+            height: 44px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .send-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .send-btn:hover:not(:disabled) {
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .voice-btn {
+            background: rgba(52, 199, 89, 0.9);
+            color: white;
+        }
+        
+        .voice-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(52, 199, 89, 0.4);
+        }
+        
+        .voice-btn.recording {
+            background: rgba(255, 71, 87, 0.9);
+            animation: recordingPulse 1s infinite;
+        }
+        
+        @keyframes messageSlide {
+            from { 
+                opacity: 0; 
+                transform: translateY(10px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+        
+        @keyframes typingBounce {
+            0%, 80%, 100% { 
+                transform: scale(0.8); 
+                opacity: 0.5; 
+            }
+            40% { 
+                transform: scale(1.2); 
+                opacity: 1; 
+            }
+        }
+        
+        @keyframes recordingPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        /* 스크롤바 스타일 */
+        .chat-messages::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-header">
+        <div class="chat-title">
+            <span>🧚‍♀️</span>
+            <span>요정과 채팅하기</span>
+        </div>
+        <button class="close-btn" onclick="closeChat()">✕</button>
+    </div>
+    
+    <div class="chat-messages" id="chatMessages">
+        <div class="message fairy">
+            안녕하세요! 저는 당신의 AI 비서 요정이에요 🧚‍♀️<br>
+            무엇을 도와드릴까요?
+        </div>
+    </div>
+    
+    <div class="chat-input-container">
+        <div class="chat-input-row">
+            <textarea 
+                class="chat-input" 
+                id="chatInput" 
+                placeholder="메시지를 입력하세요..."
+                rows="1"
+                onkeypress="handleKeyPress(event)"
+                oninput="adjustTextareaHeight()"
+            ></textarea>
+            <div class="input-buttons">
+                <button class="input-btn voice-btn" id="voiceBtn" onclick="toggleVoiceRecording()">🎤</button>
+                <button class="input-btn send-btn" id="sendBtn" onclick="sendMessage()">📤</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const voiceBtn = document.getElementById('voiceBtn');
+        
+        let isRecording = false;
+        let mediaRecorder = null;
+        
+        function closeChat() {
+            window.close();
+        }
+        
+        function adjustTextareaHeight() {
+            chatInput.style.height = 'auto';
+            chatInput.style.height = Math.min(chatInput.scrollHeight, 100) + 'px';
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+        
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'fairy'}`;
+            messageDiv.innerHTML = content;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function addTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message typing';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="typing-indicator">
+                    요정이 생각중
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            `;
+            
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function removeTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+        
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+            
+            // 사용자 메시지 표시
+            addMessage(message, true);
+            chatInput.value = '';
+            adjustTextareaHeight();
+            
+            // 타이핑 인디케이터 표시
+            addTypingIndicator();
+            
+            try {
+                // Python Bridge로 메시지 전송
+                const response = await fetch('http://localhost:8766/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        context: {
+                            timestamp: new Date().toISOString(),
+                            user_id: 'desktop_user'
+                        }
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    removeTypingIndicator();
+                    addMessage(result.message || '죄송해요, 지금은 답변할 수 없어요 😅');
+                } else {
+                    removeTypingIndicator();
+                    addMessage('죄송해요, 서버와 연결에 문제가 있어요 🥺');
+                }
+            } catch (error) {
+                console.error('메시지 전송 오류:', error);
+                removeTypingIndicator();
+                addMessage('죄송해요, 메시지 전송 중 오류가 발생했어요 😢');
+            }
+        }
+        
+        async function toggleVoiceRecording() {
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    
+                    const audioChunks = [];
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
+                    
+                    mediaRecorder.onstop = async () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        // 음성을 텍스트로 변환하는 로직 추가 예정
+                        addMessage('🎤 음성 메시지가 녹음되었습니다 (텍스트 변환 기능 준비중)', true);
+                    };
+                    
+                    mediaRecorder.start();
+                    isRecording = true;
+                    voiceBtn.classList.add('recording');
+                    voiceBtn.textContent = '⏹️';
+                    
+                } catch (error) {
+                    console.error('음성 녹음 오류:', error);
+                    addMessage('마이크 권한이 필요합니다');
+                }
+            } else {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                voiceBtn.classList.remove('recording');
+                voiceBtn.textContent = '🎤';
+            }
+        }
+        
+        // 초기화
+        console.log('💬 채팅 창 로드 완료!');
+        chatInput.focus();
+    </script>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>요정 내부 말풍선</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: transparent;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+        
+        .speech-bubble {
+            position: relative;
+            background: #E6F3FF;
+            border: 2px solid #1E3A8A;
+            border-radius: 15px;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #1E3A8A;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            animation: bubbleAppear 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            word-wrap: break-word;
+            word-break: keep-all;
+            line-height: 1.4;
+            min-width: 100px;
+            max-width: 400px;
+            min-height: 30px;
+        }
+        
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border: 10px solid transparent;
+            border-top-color: #E6F3FF;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+        
+        .speech-text {
+            display: block;
+        }
+        
+        /* 긴 텍스트 애니메이션 */
+        .speech-text.typing {
+            border-right: 2px solid #1E3A8A;
+            white-space: nowrap;
+            overflow: hidden;
+            animation: typing 0.05s steps(1, end);
+        }
+        
+        @keyframes bubbleAppear {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+        
+        /* 이모지 애니메이션 */
+        .emoji {
+            display: inline-block;
+            animation: emojiFloat 2s ease-in-out infinite;
+        }
+        
+        @keyframes emojiFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-2px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="speech-bubble" id="speechBubble">
+        <span class="speech-text" id="speechText">안녕하세요! 🧚‍♀️</span>
+    </div>
+    
+    <script>
+        const speechBubble = document.getElementById('speechBubble');
+        const speechText = document.getElementById('speechText');
+        
+        // URL에서 메시지 파라미터 받기
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialMessage = decodeURIComponent(urlParams.get('message') || '안녕하세요! 🧚‍♀️');
+        
+        // 초기 메시지 설정
+        speechText.innerHTML = formatMessage(initialMessage);
+        
+        // 창 크기를 내용에 맞게 조절
+        adjustWindowSize();
+        
+        function formatMessage(message) {
+            // 이모지에 애니메이션 클래스 추가
+            return message.replace(/(\u{1F600}-\u{1F64F}|\u{1F300}-\u{1F5FF}|\u{1F680}-\u{1F6FF}|\u{1F1E0}-\u{1F1FF}|\u{2600}-\u{26FF}|\u{2700}-\u{27BF})/gu, 
+                '<span class="emoji">$1</span>');
+        }
+        
+        // 메시지 업데이트
+        function updateMessage(message) {
+            if (message.length > 50) {
+                typeMessage(message);
+            } else {
+                speechText.innerHTML = formatMessage(message);
+                adjustWindowSize();
+            }
+            console.log('💬 내부 말풍선 업데이트:', message);
+        }
+        
+        // 타이핑 애니메이션
+        function typeMessage(message) {
+            speechText.innerHTML = '';
+            speechText.classList.add('typing');
+            
+            let i = 0;
+            const typingSpeed = 30; // ms per character
+            
+            function typeChar() {
+                if (i < message.length) {
+                    speechText.innerHTML += message.charAt(i);
+                    i++;
+                    adjustWindowSize();
+                    setTimeout(typeChar, typingSpeed);
+                } else {
+                    speechText.classList.remove('typing');
+                    speechText.innerHTML = formatMessage(message);
+                    adjustWindowSize();
+                }
+            }
+            
+            typeChar();
+        }
+        
+        // 창 크기를 내용에 맞게 조절
+        function adjustWindowSize() {
+            setTimeout(() => {
+                const bubbleRect = speechBubble.getBoundingClientRect();
+                const newWidth = Math.round(Math.max(120, Math.min(400, bubbleRect.width + 20)));
+                const newHeight = Math.round(Math.max(50, bubbleRect.height + 30));
+                
+                if (typeof require !== 'undefined') {
+                    const { ipcRenderer } = require('electron');
+                    ipcRenderer.send('resize-internal-speech-bubble', newWidth, newHeight);
+                }
+            }, 50);
+        }
+        
+        // Electron main process로부터 메시지 업데이트 받기
+        if (typeof require !== 'undefined') {
+            const { ipcRenderer } = require('electron');
+            
+            ipcRenderer.on('update-internal-speech', (event, message) => {
+                updateMessage(message);
+            });
+        }
+        
+        // 5초 후 자동 닫기 (타이머)
+        let autoCloseTimer = setTimeout(() => {
+            window.close();
+        }, 6000); // 6초 후 자동 닫기
+        
+        // 마우스 호버시 타이머 일시정지
+        speechBubble.addEventListener('mouseenter', () => {
+            if (autoCloseTimer) {
+                clearTimeout(autoCloseTimer);
+            }
+        });
+        
+        speechBubble.addEventListener('mouseleave', () => {
+            autoCloseTimer = setTimeout(() => {
+                window.close();
+            }, 3000); // 3초 후 닫기
+        });
+        
+        console.log('💬 요정 내부 말풍선 로드 완료!', initialMessage);
+    </script>
+</body>
+</html>

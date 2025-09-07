@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Fairy House</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: transparent;
+            overflow: hidden;
+            user-select: none;
+            cursor: default;
+        }
+        
+        .house-container {
+            width: 120px;
+            height: 80px;
+            position: relative;
+            animation: houseBreath 4s ease-in-out infinite;
+        }
+        
+        /* 🏠 집 메인 구조 */
+        .house {
+            width: 80px;
+            height: 50px;
+            background: linear-gradient(145deg, #8B4513 0%, #A0522D 50%, #8B4513 100%);
+            border-radius: 8px;
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 
+                2px 2px 8px rgba(0,0,0,0.3),
+                inset 1px 1px 2px rgba(255,255,255,0.2);
+        }
+        
+        /* 지붕 */
+        .roof {
+            width: 90px;
+            height: 40px;
+            background: linear-gradient(145deg, #8B0000 0%, #DC143C 50%, #8B0000 100%);
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 2px 2px 6px rgba(0,0,0,0.4);
+        }
+        
+        /* 문 */
+        .door {
+            width: 20px;
+            height: 30px;
+            background: linear-gradient(145deg, #654321, #8B4513);
+            border-radius: 10px 10px 0 0;
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        
+        .door::after {
+            content: '•';
+            color: #FFD700;
+            position: absolute;
+            right: 3px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 8px;
+        }
+        
+        /* 창문 */
+        .window {
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(145deg, #87CEEB, #4682B4);
+            border-radius: 2px;
+            position: absolute;
+            box-shadow: 
+                1px 1px 3px rgba(0,0,0,0.3),
+                inset 0px 0px 4px rgba(255,255,255,0.6);
+        }
+        
+        .window-left {
+            top: 20px;
+            left: 12px;
+        }
+        
+        .window-right {
+            top: 20px;
+            right: 12px;
+        }
+        
+        /* 창문 십자 */
+        .window::before {
+            content: '';
+            position: absolute;
+            width: 1px;
+            height: 16px;
+            background: #2F4F4F;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .window::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 1px;
+            background: #2F4F4F;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        /* 굴뚝 */
+        .chimney {
+            width: 12px;
+            height: 25px;
+            background: linear-gradient(145deg, #696969, #808080);
+            border-radius: 2px 2px 0 0;
+            position: absolute;
+            top: 5px;
+            right: 15px;
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+        }
+        
+        /* 연기 효과 */
+        .smoke {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: smoke 3s ease-in-out infinite;
+        }
+        
+        .smoke::before {
+            content: '☁️';
+            font-size: 8px;
+            opacity: 0.7;
+            display: block;
+            animation: smokeFloat 2s ease-in-out infinite;
+        }
+        
+        /* 집 주변 장식 */
+        .garden {
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            animation: gardenSway 6s ease-in-out infinite;
+        }
+        
+        /* 애니메이션들 */
+        @keyframes houseBreath {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.02) rotate(0.5deg); }
+        }
+        
+        @keyframes smoke {
+            0% { opacity: 0; transform: translateX(-50%) translateY(0px); }
+            50% { opacity: 0.8; transform: translateX(-45%) translateY(-15px); }
+            100% { opacity: 0; transform: translateX(-40%) translateY(-30px); }
+        }
+        
+        @keyframes smokeFloat {
+            0%, 100% { transform: translateX(0px); }
+            50% { transform: translateX(3px); }
+        }
+        
+        @keyframes gardenSway {
+            0%, 100% { transform: translateX(-50%) rotate(-2deg); }
+            50% { transform: translateX(-50%) rotate(2deg); }
+        }
+        
+        /* 마우스 호버 효과 */
+        .house-container:hover .house {
+            transform: translateX(-50%) scale(1.05);
+            transition: transform 0.3s ease;
+        }
+        
+        .house-container:hover .chimney .smoke::before {
+            animation-duration: 1s;
+        }
+        
+        /* 컨텍스트 메뉴 스타일 */
+        .context-menu {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 8px;
+            min-width: 180px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(139, 69, 19, 0.3);
+            z-index: 10001;
+            opacity: 0;
+            visibility: hidden;
+            transform: scale(0.9) translateY(-10px);
+            transition: all 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            user-select: none;
+        }
+        
+        .context-menu.show {
+            opacity: 1;
+            visibility: visible;
+            transform: scale(1) translateY(0);
+        }
+        
+        .context-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .context-item:hover {
+            background: rgba(139, 69, 19, 0.15);
+            color: #8B4513;
+            transform: translateX(2px);
+        }
+        
+        .context-item .icon {
+            margin-right: 10px;
+            font-size: 16px;
+            width: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .context-item .text {
+            flex: 1;
+        }
+        
+        .context-divider {
+            height: 1px;
+            background: rgba(139, 69, 19, 0.2);
+            margin: 6px 8px;
+        }
+        
+        .context-item:active {
+            transform: translateX(2px) scale(0.98);
+        }
+    </style>
+</head>
+<body>
+    <div class="house-container" onclick="houseClicked()" oncontextmenu="showContextMenu(event)">
+        <!-- 지붕 -->
+        <div class="roof"></div>
+        
+        <!-- 집 본체 -->
+        <div class="house">
+            <!-- 창문들 -->
+            <div class="window window-left"></div>
+            <div class="window window-right"></div>
+            
+            <!-- 문 -->
+            <div class="door"></div>
+        </div>
+        
+        <!-- 굴뚝 -->
+        <div class="chimney">
+            <div class="smoke"></div>
+        </div>
+        
+        <!-- 정원 -->
+        <div class="garden">🌸🌿🌸</div>
+    </div>
+    
+    <!-- 컨텍스트 메뉴는 이제 별도 윈도우로 처리됨 -->
+    
+    <script>
+        const contextMenu = document.getElementById('contextMenu');
+        
+        function houseClicked() {
+            console.log('🏠 집을 클릭했습니다!');
+            // 클릭으로는 굴뚝에서 연기가 더 많이 나오게
+            const smoke = document.querySelector('.smoke');
+            if (smoke) {
+                smoke.style.animationDuration = '1s';
+                setTimeout(() => {
+                    smoke.style.animationDuration = '3s';
+                }, 2000);
+            }
+        }
+        
+        // 컨텍스트 메뉴 관련 함수들
+        function showContextMenu(event) {
+            event.preventDefault();
+            
+            // 스크린 좌표 기준으로 계산
+            const screenX = event.screenX;
+            const screenY = event.screenY;
+            
+            console.log('🖱️ 집 컨텍스트 메뉴 요청:', screenX, screenY);
+            
+            // Electron main process에 별도 윈도우로 컨텍스트 메뉴 열기 요청
+            if (require) {
+                require('electron').ipcRenderer.send('open-context-menu', screenX, screenY);
+            }
+        }
+        
+        function hideContextMenu() {
+            contextMenu.classList.remove('show');
+            console.log('❌ 집 컨텍스트 메뉴 숨김');
+        }
+        
+        // 집 전용 메뉴 항목들
+        function openMainSettings() {
+            hideContextMenu();
+            console.log('⚙️ 메인 설정 열기');
+            // TODO: 실제 설정창 구현
+        }
+        
+        function openAuthSettings() {
+            hideContextMenu();
+            console.log('🔑 Claude SDK 인증 설정 열기');
+            
+            // Electron main process에 인증 설정창 열기 요청
+            if (window.electronAPI) {
+                window.electronAPI.openAuthSettings();
+            } else {
+                console.error('Electron API를 사용할 수 없습니다');
+            }
+        }
+        
+        function openCustomization() {
+            hideContextMenu();
+            console.log('🎨 커스터마이징 메뉴 열기');
+            // TODO: 커스터마이징 창 구현
+        }
+        
+        function viewLogs() {
+            hideContextMenu();
+            console.log('📋 로그 뷰어 열기');
+            // TODO: 로그 뷰어 구현
+        }
+        
+        function showSystemInfo() {
+            hideContextMenu();
+            console.log('💻 시스템 정보 표시');
+            // TODO: 시스템 정보창 구현
+        }
+        
+        function showAbout() {
+            hideContextMenu();
+            console.log('ℹ️ 정보창 열기');
+            // TODO: 정보창 구현
+        }
+        
+        // 전역 클릭으로 컨텍스트 메뉴 숨기기
+        document.addEventListener('click', function(event) {
+            if (!contextMenu.contains(event.target)) {
+                hideContextMenu();
+            }
+        });
+        
+        // 집 초기화
+        console.log('🏠 Fairy House 로드 완료!');
+    </script>
+</body>
+</html>

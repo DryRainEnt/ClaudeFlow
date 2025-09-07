@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>요정 생각중 말풍선</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: transparent;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+        
+        .thinking-bubble {
+            position: relative;
+            width: 120px;
+            height: 60px;
+            background: #F0F8FF;
+            border: 2px solid #87CEEB;
+            border-radius: 30px;
+            animation: thinkingPulse 2s ease-in-out infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* 구름 모양 만들기 */
+        .thinking-bubble::before {
+            content: '';
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            width: 25px;
+            height: 25px;
+            background: #F0F8FF;
+            border: 2px solid #87CEEB;
+            border-radius: 50%;
+        }
+        
+        .thinking-bubble::after {
+            content: '';
+            position: absolute;
+            top: -10px;
+            right: 25px;
+            width: 20px;
+            height: 20px;
+            background: #F0F8FF;
+            border: 2px solid #87CEEB;
+            border-radius: 50%;
+        }
+        
+        /* 꼬리 부분 */
+        .thinking-tail {
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .thinking-tail::before {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #F0F8FF;
+            border: 2px solid #87CEEB;
+            border-radius: 50%;
+            bottom: 0;
+        }
+        
+        .thinking-tail::after {
+            content: '';
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            background: #F0F8FF;
+            border: 2px solid #87CEEB;
+            border-radius: 50%;
+            bottom: -15px;
+            left: -8px;
+        }
+        
+        .thinking-text {
+            font-size: 14px;
+            font-weight: bold;
+            color: #4682B4;
+            z-index: 10;
+            position: relative;
+            text-align: center;
+        }
+        
+        .thinking-dots {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            margin-left: 5px;
+        }
+        
+        .thinking-dot {
+            width: 4px;
+            height: 4px;
+            background: #4682B4;
+            border-radius: 50%;
+            animation: thinkingBounce 1.4s infinite ease-in-out both;
+        }
+        
+        .thinking-dot:nth-child(1) { animation-delay: -0.32s; }
+        .thinking-dot:nth-child(2) { animation-delay: -0.16s; }
+        .thinking-dot:nth-child(3) { animation-delay: 0s; }
+        
+        @keyframes thinkingPulse {
+            0%, 100% { 
+                transform: scale(1);
+                opacity: 0.9;
+            }
+            50% { 
+                transform: scale(1.05);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes thinkingBounce {
+            0%, 80%, 100% { 
+                transform: scale(0.8); 
+                opacity: 0.5; 
+            }
+            40% { 
+                transform: scale(1.2); 
+                opacity: 1; 
+            }
+        }
+        
+        @keyframes cloudFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        .cloud-animation {
+            animation: cloudFloat 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="thinking-bubble cloud-animation">
+        <div class="thinking-tail"></div>
+        <div class="thinking-text">
+            생각중
+            <span class="thinking-dots">
+                <div class="thinking-dot"></div>
+                <div class="thinking-dot"></div>
+                <div class="thinking-dot"></div>
+            </span>
+        </div>
+    </div>
+    
+    <script>
+        console.log('☁️ 요정 생각중 말풍선 로드 완료!');
+        
+        // 15초 후 자동 닫기 (응답이 너무 오래 걸릴 경우를 대비)
+        setTimeout(() => {
+            window.close();
+        }, 15000);
+    </script>
+</body>
+</html>
