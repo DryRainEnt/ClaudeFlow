@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>LUCA Fairy Character</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: transparent;
+            overflow: hidden;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        .fairy-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 200px;
+            height: 220px;
+        }
+        
+        /* LUCA 캐릭터 캔버스 */
+        #lucaCanvas {
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+            background: transparent;
+            cursor: grab;
+        }
+        
+        #lucaCanvas:active {
+            cursor: grabbing;
+        }
+        
+        /* 말풍선 */
+        .speech-bubble {
+            position: absolute;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #E6F3FF !important;
+            border: 2px solid #1E3A8A !important;
+            border-radius: 15px;
+            padding: 8px 12px;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            color: #1E3A8A !important;
+            white-space: nowrap;
+            opacity: 0;
+            text-align: center;
+            transition: opacity 0.3s ease;
+            z-index: 9999;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            pointer-events: none;
+        }
+        
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border: 6px solid transparent;
+            border-top-color: #1E3A8A;
+        }
+        
+        .speech-bubble.show {
+            opacity: 1;
+        }
+        
+        /* 디버그 정보 */
+        .debug-info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            display: none;
+        }
+        
+        .debug-info.show {
+            display: block;
+        }
+        
+        /* 애니메이션 상태 표시 */
+        .animation-status {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-family: Arial, sans-serif;
+            display: none;
+        }
+        
+        .animation-status.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="fairy-container">
+        <!-- LUCA 캐릭터 캔버스 -->
+        <canvas id="lucaCanvas" width="200" height="220"></canvas>
+        
+        <!-- 말풍선 -->
+        <div class="speech-bubble" id="speechBubble">안녕하세요! 🧚‍♀️</div>
+        
+        <!-- 애니메이션 상태 표시 -->
+        <div class="animation-status" id="animationStatus">Idle</div>
+    </div>
+    
+    <!-- 디버그 정보 -->
+    <div class="debug-info" id="debugInfo">
+        <div>Animation: <span id="currentAnimation">Idle</span></div>
+        <div>Frame: <span id="currentFrame">0</span></div>
+        <div>Position: <span id="position">0, 0</span></div>
+        <div>State: <span id="state">Normal</span></div>
+    </div>
+    
+    <script type="module">
+        console.log('📜 LUCA Fairy 스크립트 시작');
+        
+        try {
+            console.log('📦 LucaCharacter 모듈 import 시도...');
+            const { LucaCharacter } = await import('./core/luca-animation.js');
+            console.log('✅ LucaCharacter 모듈 import 성공:', !!LucaCharacter);
+            
+            // DOM 요소
+            const canvas = document.getElementById('lucaCanvas');
+            const speechBubble = document.getElementById('speechBubble');
+            const debugInfo = document.getElementById('debugInfo');
+            const animationStatus = document.getElementById('animationStatus');
+            
+            console.log('🎨 DOM 요소 확인:');
+            console.log('  - canvas:', !!canvas);
+            console.log('  - speechBubble:', !!speechBubble);
+        
+        // LUCA 캐릭터 인스턴스
+        let lucaCharacter = null;
+        
+        // 상태 관리
+        let currentState = 'idle';
+        let lastInteractionTime = Date.now();
+        let isMouseOver = false;
+        let autoAnimationTimer = null;
+        
+        // LUCA 캐릭터 초기화
+        async function initLucaCharacter() {
+            try {
+                console.log('🧚‍♀️ LUCA 캐릭터 초기화 시작...');
+                
+                lucaCharacter = new LucaCharacter(
+                    canvas,
+                    './data/LUCA_Sheet.png',
+                    './data/LUCA_Data.json'
+                );
+                
+                // 리소스 로드 확인을 위한 추가 로그
+                console.log('📂 LUCA 리소스 경로:');
+                console.log('  - 스프라이트:', './data/LUCA_Sheet.png');
+                console.log('  - 데이터:', './data/LUCA_Data.json');
+                
+                // 캐릭터가 로드될 때까지 대기
+                const checkLoaded = setInterval(() => {
+                    if (lucaCharacter.isLoaded) {
+                        clearInterval(checkLoaded);
+                        onCharacterLoaded();
+                    }
+                }, 100);
+                
+            } catch (error) {
+                console.error('❌ LUCA 캐릭터 초기화 실패:', error);
+            }
+        }
+        
+        // 캐릭터 로드 완료 후 설정
+        function onCharacterLoaded() {
+            console.log('✅ LUCA 캐릭터 로드 완료!');
+            
+            // 초기 위치 설정 (캔버스 중앙)
+            lucaCharacter.moveBottomTo(canvas.width / 2, canvas.height / 2);
+            
+            // 자동 애니메이션 시작
+            startAutoAnimation();
+            
+            // 인터랙션 이벤트 재정의
+            setupInteractionEvents();
+            
+            // FairySystem과 연동 설정
+            setupFairySystemIntegration();
+            
+            // 디버그 모드 토글 (개발용)
+            lucaCharacter.toggleDebugAnchors(false);
+            
+            // 첫 메시지 (애니메이션 없이)
+            showMessage("안녕하세요! 저는 LUCA에요! 🧚‍♀️");
+        }
+        
+        // 상호작용 이벤트 설정
+        function setupInteractionEvents() {
+            // 기존 이벤트 리스너 제거
+            canvas.removeEventListener('click', lucaCharacter.onClick);
+            
+            // 새로운 인터랙션 이벤트 설정
+            let clickTimeout = null;
+            
+            canvas.addEventListener('click', (e) => {
+                if (lucaCharacter.isDragging) return;
+                
+                // 더블클릭 방지
+                if (clickTimeout) {
+                    clearTimeout(clickTimeout);
+                    clickTimeout = null;
+                    return;
+                }
+                
+                clickTimeout = setTimeout(() => {
+                    handleClick(e);
+                    clickTimeout = null;
+                }, 200);
+            });
+            
+            canvas.addEventListener('mouseenter', () => {
+                isMouseOver = true;
+                if (currentState === 'idle') {
+                    transitionToState('waiting');
+                }
+            });
+            
+            canvas.addEventListener('mouseleave', () => {
+                isMouseOver = false;
+                // 인사 애니메이션 중이면 중단하지 않음
+                const isGreetingActive = lucaCharacter.animation && 
+                                       lucaCharacter.animation.currentAnimation === 'Greeting';
+                if (currentState === 'waiting' && !lucaCharacter.isDragging && !isGreetingActive) {
+                    transitionToState('idle');
+                }
+            });
+            
+            // 키보드 단축키
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT') return;
+                
+                switch(e.key.toLowerCase()) {
+                    case 'd':
+                        lucaCharacter.toggleDebugAnchors();
+                        break;
+                    case 'h':
+                        debugInfo.classList.toggle('show');
+                        break;
+                    case '1':
+                        transitionToState('idle');
+                        break;
+                    case '2':
+                        transitionToState('greeting');
+                        break;
+                    case '3':
+                        transitionToState('waiting');
+                        break;
+                    case '4':
+                        transitionToState('move');
+                        break;
+                    case '5':
+                        transitionToState('hang');
+                        break;
+                }
+            });
+        }
+        
+        // 클릭 처리
+        function handleClick(e) {
+            console.log('🖱️ LUCA 클릭!');
+            lastInteractionTime = Date.now();
+            
+            // 인사 애니메이션은 LucaCharacter 내부에서만 처리하도록 제거
+            
+            // 인사 메시지 표시
+            const greetings = [
+                "안녕하세요! 🧚‍♀️",
+                "반가워요! ✨",
+                "좋은 하루예요! 🌟",
+                "무엇을 도와드릴까요? 💖",
+                "함께 놀아요! 🎀"
+            ];
+            const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+            showMessage(randomGreeting);
+        }
+        
+        // 상태 전환
+        function transitionToState(newState) {
+            if (currentState === newState) return;
+            
+            console.log(`🔄 상태 전환: ${currentState} → ${newState}`);
+            currentState = newState;
+            
+            // 애니메이션 매핑
+            const animationMap = {
+                'idle': 'Idle',
+                'greeting': 'Greeting', 
+                'waiting': 'Waiting',
+                'move': 'Move',
+                'hang': 'Hang'
+            };
+            
+            const animation = animationMap[newState];
+            if (animation && lucaCharacter.animation) {
+                lucaCharacter.animation.playAnimation(animation);
+                updateStatus(newState);
+            }
+            
+            // 상태별 메시지
+            const stateMessages = {
+                'waiting': "뭔가 할 일이 있나요? 👀",
+                'move': "움직이는 중이에요! 🏃‍♀️",
+                'hang': "매달려 있어요! 🕷️"
+            };
+            
+            if (stateMessages[newState]) {
+                showMessage(stateMessages[newState], 2000);
+            }
+        }
+        
+        // 자동 애니메이션 시스템
+        function startAutoAnimation() {
+            const runAutoAnimation = () => {
+                if (lucaCharacter.isDragging || speechBubble.classList.contains('show')) {
+                    // 드래그 중이거나 말풍선이 표시 중이면 대기
+                    autoAnimationTimer = setTimeout(runAutoAnimation, 2000);
+                    return;
+                }
+                
+                const timeSinceLastInteraction = Date.now() - lastInteractionTime;
+                
+                // 10초 이상 상호작용이 없으면 자동 애니메이션
+                if (timeSinceLastInteraction > 10000) {
+                    const randomActions = ['idle', 'waiting', 'move'];
+                    const randomAction = randomActions[Math.floor(Math.random() * randomActions.length)];
+                    
+                    if (currentState !== randomAction) {
+                        transitionToState(randomAction);
+                    }
+                    
+                    // 20% 확률로 자동 메시지
+                    if (Math.random() < 0.2) {
+                        const autoMessages = [
+                            "심심해요... 🥱",
+                            "뭔가 재미있는 일 없을까요? 🤔",
+                            "같이 놀아요! 🎈",
+                            "오늘 날씨가 좋네요! ☀️"
+                        ];
+                        const randomMessage = autoMessages[Math.floor(Math.random() * autoMessages.length)];
+                        showMessage(randomMessage, 3000);
+                    }
+                }
+                
+                // 5-15초 후 다음 자동 애니메이션
+                const nextDelay = 5000 + Math.random() * 10000;
+                autoAnimationTimer = setTimeout(runAutoAnimation, nextDelay);
+            };
+            
+            // 5초 후 시작
+            autoAnimationTimer = setTimeout(runAutoAnimation, 5000);
+        }
+        
+        // 메시지 표시
+        function showMessage(message, duration = 4000) {
+            speechBubble.textContent = message;
+            speechBubble.classList.add('show');
+            
+            setTimeout(() => {
+                speechBubble.classList.remove('show');
+            }, duration);
+        }
+        
+        // FairySystem 연동 확인만 수행 (중복 정의 방지)
+        function setupFairySystemIntegration() {
+            if (window.fairySystem) {
+                console.log('✅ FairySystem 연동 확인됨');
+                console.log('🔍 setNewPosition 존재 여부:', !!window.fairySystem.setNewPosition);
+                console.log('🔍 FairySystem 메서드들:', Object.keys(window.fairySystem));
+            } else {
+                console.log('❌ FairySystem이 존재하지 않음');
+            }
+        }
+        
+        // 상태 정보 업데이트
+        function updateStatus(state) {
+            animationStatus.textContent = state.charAt(0).toUpperCase() + state.slice(1);
+            animationStatus.classList.add('show');
+            
+            setTimeout(() => {
+                animationStatus.classList.remove('show');
+            }, 2000);
+        }
+        
+        // 디버그 정보 업데이트
+        function updateDebugInfo() {
+            if (!debugInfo.classList.contains('show') || !lucaCharacter) return;
+            
+            const posInfo = lucaCharacter.getPositionInfo();
+            
+            document.getElementById('currentAnimation').textContent = lucaCharacter.animation?.currentAnimation || 'None';
+            document.getElementById('currentFrame').textContent = lucaCharacter.animation?.currentFrame || '0';
+            document.getElementById('position').textContent = `${Math.round(posInfo.bottom.x)}, ${Math.round(posInfo.bottom.y)}`;
+            document.getElementById('state').textContent = currentState + (lucaCharacter.isDragging ? ' (Dragging)' : '');
+        }
+        
+        // 주기적 디버그 정보 업데이트
+        setInterval(updateDebugInfo, 100);
+        
+            // 초기화 시작
+            initLucaCharacter();
+            
+            // 전역 접근을 위한 윈도우 객체에 추가
+            window.lucaCharacter = lucaCharacter;
+            window.transitionToState = transitionToState;
+            window.showMessage = showMessage;
+            
+            console.log('🎮 LUCA Fairy 컨트롤러 로드 완료!');
+            console.log('키보드 단축키:');
+            console.log('  D: 디버그 앵커 토글');
+            console.log('  H: 디버그 정보 토글');
+            console.log('  1-5: 애니메이션 직접 제어');
+            
+        } catch (error) {
+            console.error('❌ LUCA Fairy 초기화 실패:', error);
+        }
+    </script>
+</body>
+</html>

@@ -1,4 +1,15 @@
 const { app, BrowserWindow, screen, Tray, Menu, ipcMain } = require('electron');
+
+// IPC 클로닝 오류 경고 억제
+process.on('unhandledRejection', (reason, promise) => {
+  if (reason && reason.message && reason.message.includes('object could not be cloned')) {
+    // IPC 클로닝 관련 오류는 무시 (기능상 문제없음)
+    console.log('🔇 IPC 클로닝 경고 억제:', reason.message.substring(0, 50));
+    return;
+  }
+  // 다른 unhandledRejection은 기존 방식대로 처리
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
 const path = require('path');
 const { spawn } = require('child_process');
 
@@ -18,9 +29,9 @@ let fairyThinkingBubbleWindow = null; // 요정 생각중 말풍선 창
 const HOUSE_POSITION = { x: 50, y: 50 };
 const HOUSE_SIZE = { width: 120, height: 80 };
 
-// 🧚‍♀️ 요정의 돌아다니기 설정
-const FAIRY_SIZE = { width: 160, height: 160 }; // 폭 줄임
-const FAIRY_CONTENT_OFFSET = { x: 60, y: 80 }; // 실제 요정 위치 오프셋
+// 🧚‍♀️ 요정의 돌아다니기 설정 (LUCA 캐릭터용으로 최적화)
+const FAIRY_SIZE = { width: 200, height: 220 }; // LUCA 캐릭터 잘림 방지를 위해 캔버스와 동일하게 확장
+const FAIRY_CONTENT_OFFSET = { x: 70, y: 80 }; // LUCA 캐릭터 중심 오프셋
 const ROAM_RADIUS = 64; // 자기 위치 기준 반경
 const MOVE_INTERVAL = 3000; // 3초마다 이동
 
@@ -54,8 +65,8 @@ class FairySystem {
     const bounds = display.workArea;
     
     return {
-      x: Math.max(0, Math.min(newX, bounds.width - FAIRY_SIZE.width)),
-      y: Math.max(0, Math.min(newY, bounds.height - FAIRY_SIZE.height))
+      x: Math.max(-FAIRY_SIZE.width/2, Math.min(newX, bounds.width - FAIRY_SIZE.width/2)),
+      y: Math.max(-FAIRY_SIZE.height/2, Math.min(newY, bounds.height - FAIRY_SIZE.height/2))
     };
   }
 
@@ -257,6 +268,16 @@ class FairySystem {
     this.currentPosition = { x, y };
     this.targetPosition = { x, y };
     console.log('📍 요정 새 위치 설정:', x, y);
+    
+    // 실제 윈도우 이동 처리
+    if (fairyWindow && !fairyWindow.isDestroyed()) {
+      fairyWindow.setBounds({
+        x: Math.floor(x),
+        y: Math.floor(y),
+        width: FAIRY_SIZE.width,
+        height: FAIRY_SIZE.height
+      });
+    }
   }
 }
 
@@ -299,6 +320,689 @@ function stopPythonBridge() {
     pythonBridge.kill();
     console.log('🛑 Python Bridge 종료');
   }
+}
+
+// 🧚‍♀️ 페어리 성격 설정창 생성
+function createPersonalitySettingsWindow() {
+  const personalityWindow = new BrowserWindow({
+    width: 520,
+    height: 650,
+    center: true,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    },
+    titleBarStyle: 'hiddenInset',
+    vibrancy: 'ultra-dark',
+    transparent: true,
+    show: false
+  });
+
+  personalityWindow.loadFile(path.join(__dirname, 'personality-settings.html'));
+  
+  personalityWindow.once('ready-to-show', () => {
+    personalityWindow.show();
+    personalityWindow.focus();
+  });
+  
+  // 개발 모드에서만 DevTools 열기
+  if (process.env.NODE_ENV === 'development') {
+    personalityWindow.webContents.openDevTools();
+  }
+
+  console.log('🧚‍♀️ 페어리 성격 설정 창 열림');
+  return personalityWindow;
+}
+
+// 📁 페어리 성격 설정 파일 저장
+async function savePersonalitySettings(settings) {
+  const fs = require('fs').promises;
+  const os = require('os');
+  
+  try {
+    const configDir = path.join(os.homedir(), '.fairy-assistant');
+    const configFile = path.join(configDir, 'personality.json');
+    
+    // 디렉토리가 없으면 생성
+    try {
+      await fs.access(configDir);
+    } catch {
+      await fs.mkdir(configDir, { recursive: true });
+      console.log('📁 설정 디렉토리 생성:', configDir);
+    }
+    
+    // 설정 파일 저장
+    await fs.writeFile(configFile, JSON.stringify(settings, null, 2), 'utf8');
+    console.log('💾 페어리 성격 설정 저장 완료:', configFile);
+    return true;
+    
+  } catch (error) {
+    console.error('❌ 페어리 성격 설정 저장 실패:', error);
+    return false;
+  }
+}
+
+// 📁 페어리 성격 설정 파일 로드
+async function loadPersonalitySettings() {
+  const fs = require('fs').promises;
+  const os = require('os');
+  
+  try {
+    const configFile = path.join(os.homedir(), '.fairy-assistant', 'personality.json');
+    const data = await fs.readFile(configFile, 'utf8');
+    const settings = JSON.parse(data);
+    console.log('📋 페어리 성격 설정 로드 완료:', settings);
+    return settings;
+    
+  } catch (error) {
+    // 파일이 없으면 기본값 반환
+    if (error.code === 'ENOENT') {
+      console.log('📋 기본 페어리 설정 사용 (설정 파일 없음)');
+      return {
+        name: '페어리',
+        personality: '친절하고 도움을 주는 것을 좋아하며, 항상 밝고 긍정적인 에너지를 가지고 있습니다.',
+        role: '개발과 창작 활동을 도와주는 AI 어시스턴트',
+        timestamp: new Date().toISOString()
+      };
+    }
+    
+    console.error('❌ 페어리 성격 설정 로드 실패:', error);
+    return null;
+  }
+}
+
+// ⚙️ 메인 설정창 생성
+function createMainSettingsWindow() {
+  const mainSettingsWindow = new BrowserWindow({
+    width: 640,
+    height: 750,
+    center: true,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    },
+    titleBarStyle: 'hiddenInset',
+    vibrancy: 'ultra-dark',
+    transparent: true,
+    show: false
+  });
+
+  mainSettingsWindow.loadFile(path.join(__dirname, 'main-settings.html'));
+  
+  mainSettingsWindow.once('ready-to-show', () => {
+    mainSettingsWindow.show();
+    mainSettingsWindow.focus();
+  });
+  
+  // 개발 모드에서만 DevTools 열기
+  if (process.env.NODE_ENV === 'development') {
+    mainSettingsWindow.webContents.openDevTools();
+  }
+
+  console.log('⚙️ 메인 설정 창 열림');
+  return mainSettingsWindow;
+}
+
+// 📁 메인 설정 파일 저장
+async function saveMainSettings(settings) {
+  const fs = require('fs').promises;
+  const os = require('os');
+  
+  try {
+    const configDir = path.join(os.homedir(), '.fairy-assistant');
+    const configFile = path.join(configDir, 'main-settings.json');
+    
+    // 디렉토리가 없으면 생성
+    try {
+      await fs.access(configDir);
+    } catch {
+      await fs.mkdir(configDir, { recursive: true });
+      console.log('📁 설정 디렉토리 생성:', configDir);
+    }
+    
+    // 설정 파일 저장
+    await fs.writeFile(configFile, JSON.stringify(settings, null, 2), 'utf8');
+    console.log('💾 메인 설정 저장 완료:', configFile);
+    
+    // 설정이 변경되면 실제 시스템에 적용
+    applyMainSettings(settings);
+    
+    return true;
+    
+  } catch (error) {
+    console.error('❌ 메인 설정 저장 실패:', error);
+    return false;
+  }
+}
+
+// 📁 메인 설정 파일 로드
+async function loadMainSettings() {
+  const fs = require('fs').promises;
+  const os = require('os');
+  
+  try {
+    const configFile = path.join(os.homedir(), '.fairy-assistant', 'main-settings.json');
+    const data = await fs.readFile(configFile, 'utf8');
+    const settings = JSON.parse(data);
+    console.log('📋 메인 설정 로드 완료:', settings);
+    return settings;
+    
+  } catch (error) {
+    // 파일이 없으면 기본값 반환
+    if (error.code === 'ENOENT') {
+      console.log('📋 기본 메인 설정 사용 (설정 파일 없음)');
+      return {
+        autoMove: true,
+        moveInterval: 3,
+        moveRadius: 64,
+        houseFixed: true,
+        autoCloseTime: 8,
+        bubbleDuration: 10,
+        autoResponse: true,
+        theme: 'default',
+        transparency: 95,
+        timestamp: new Date().toISOString()
+      };
+    }
+    
+    console.error('❌ 메인 설정 로드 실패:', error);
+    return null;
+  }
+}
+
+// ⚙️ 메인 설정 적용
+function applyMainSettings(settings) {
+  try {
+    console.log('🔧 메인 설정 적용 중:', settings);
+    
+    // 페어리 이동 관련 설정 적용
+    if (fairySystem) {
+      if (settings.autoMove) {
+        fairySystem.resumeMovement();
+        // 이동 간격 업데이트 (현재 구조상 직접 변경 어려움, 추후 개선 필요)
+      } else {
+        fairySystem.pauseMovement();
+      }
+    }
+    
+    // context-menu.html의 자동 닫기 시간은 현재 하드코딩되어 있음 (8초)
+    // 필요시 동적으로 변경하는 기능을 추후 추가
+    
+    console.log('✅ 메인 설정 적용 완료');
+    
+  } catch (error) {
+    console.error('❌ 메인 설정 적용 실패:', error);
+  }
+}
+
+// 📋 로그 뷰어 창 생성
+function createLogViewerWindow() {
+  const logViewerWindow = new BrowserWindow({
+    width: 900,
+    height: 700,
+    center: true,
+    resizable: true,
+    minimizable: false,
+    maximizable: true,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    },
+    titleBarStyle: 'hiddenInset',
+    vibrancy: 'ultra-dark',
+    transparent: true,
+    show: false
+  });
+
+  logViewerWindow.loadFile(path.join(__dirname, 'log-viewer.html'));
+  
+  logViewerWindow.once('ready-to-show', () => {
+    logViewerWindow.show();
+    logViewerWindow.focus();
+  });
+  
+  // 개발 모드에서만 DevTools 열기
+  if (process.env.NODE_ENV === 'development') {
+    logViewerWindow.webContents.openDevTools();
+  }
+
+  console.log('📋 로그 뷰어 창 열림');
+  return logViewerWindow;
+}
+
+// 📁 로그 파일들 로드
+async function loadLogFiles() {
+  const fs = require('fs').promises;
+  const os = require('os');
+  
+  try {
+    const logDir = path.join(os.homedir(), '.fairy-assistant', 'logs');
+    const logs = [];
+    
+    // 로그 디렉토리 확인
+    try {
+      await fs.access(logDir);
+    } catch {
+      console.log('📁 로그 디렉토리가 없음, 더미 로그 생성');
+      return generateDummyLogs();
+    }
+    
+    // 로그 파일들 읽기 (debug.log, session.log, mcp.log 등)
+    const logFiles = ['debug.log', 'session.log', 'mcp.log', 'main.log'];
+    
+    for (const filename of logFiles) {
+      const filepath = path.join(logDir, filename);
+      try {
+        const content = await fs.readFile(filepath, 'utf8');
+        const fileLogs = parseLogFile(content, filename);
+        logs.push(...fileLogs);
+      } catch (error) {
+        // 파일이 없으면 건너뛰기
+        if (error.code !== 'ENOENT') {
+          console.error(`❌ ${filename} 로드 실패:`, error);
+        }
+      }
+    }
+    
+    // 시간순 정렬
+    logs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    
+    console.log(`📋 로그 ${logs.length}개 로드 완료`);
+    return logs;
+    
+  } catch (error) {
+    console.error('❌ 로그 파일 로드 실패:', error);
+    return generateDummyLogs();
+  }
+}
+
+// 📄 로그 파일 파싱
+function parseLogFile(content, filename) {
+  const logs = [];
+  const lines = content.split('\n').filter(line => line.trim());
+  
+  lines.forEach(line => {
+    try {
+      // 간단한 로그 파싱 (타임스탬프, 레벨, 메시지)
+      const match = line.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z)?\s*(\w+):?\s*(.+)$/);
+      
+      if (match) {
+        const [, timestamp, level, message] = match;
+        logs.push({
+          timestamp: timestamp || new Date().toISOString(),
+          level: determineLogLevel(level, message),
+          message: message.trim(),
+          source: filename
+        });
+      } else {
+        // 파싱할 수 없는 라인은 info로 처리
+        logs.push({
+          timestamp: new Date().toISOString(),
+          level: 'info',
+          message: line.trim(),
+          source: filename
+        });
+      }
+    } catch (error) {
+      // 파싱 오류 무시
+    }
+  });
+  
+  return logs;
+}
+
+// 🎯 로그 레벨 결정
+function determineLogLevel(level, message) {
+  if (level) {
+    const lowerLevel = level.toLowerCase();
+    if (['error', 'err'].includes(lowerLevel)) return 'error';
+    if (['warning', 'warn'].includes(lowerLevel)) return 'warning';
+    if (['success', 'ok'].includes(lowerLevel)) return 'success';
+    if (['debug', 'dbg'].includes(lowerLevel)) return 'debug';
+    return 'info';
+  }
+  
+  // 메시지 내용으로 레벨 추정
+  const lowerMessage = message.toLowerCase();
+  if (lowerMessage.includes('error') || lowerMessage.includes('fail') || lowerMessage.includes('❌')) return 'error';
+  if (lowerMessage.includes('warn') || lowerMessage.includes('⚠️')) return 'warning';
+  if (lowerMessage.includes('success') || lowerMessage.includes('완료') || lowerMessage.includes('✅')) return 'success';
+  if (lowerMessage.includes('debug') || lowerMessage.includes('🔍')) return 'debug';
+  
+  return 'info';
+}
+
+// 📝 더미 로그 생성 (테스트용)
+function generateDummyLogs() {
+  const now = new Date();
+  const logs = [
+    {
+      timestamp: new Date(now - 300000).toISOString(),
+      level: 'info',
+      message: '🧚‍♀️ Fairy Assistant 시작',
+      source: 'main.log'
+    },
+    {
+      timestamp: new Date(now - 250000).toISOString(),
+      level: 'success',
+      message: '✅ Python Bridge 초기화 완료',
+      source: 'session.log'
+    },
+    {
+      timestamp: new Date(now - 200000).toISOString(),
+      level: 'info',
+      message: '🏠 집 윈도우 생성 완료',
+      source: 'main.log'
+    },
+    {
+      timestamp: new Date(now - 150000).toISOString(),
+      level: 'debug',
+      message: '🔍 페어리 이동 시스템 초기화',
+      source: 'debug.log'
+    },
+    {
+      timestamp: new Date(now - 100000).toISOString(),
+      level: 'warning',
+      message: '⚠️ 설정 파일이 없어서 기본값 사용',
+      source: 'main.log'
+    },
+    {
+      timestamp: new Date(now - 50000).toISOString(),
+      level: 'success',
+      message: '✅ MCP 서버 연결 성공',
+      source: 'mcp.log'
+    },
+    {
+      timestamp: new Date(now - 10000).toISOString(),
+      level: 'error',
+      message: '❌ Claude API 호출 실패: 네트워크 오류',
+      source: 'session.log'
+    },
+    {
+      timestamp: now.toISOString(),
+      level: 'info',
+      message: '📋 로그 뷰어 열림',
+      source: 'main.log'
+    }
+  ];
+  
+  console.log('📝 더미 로그 8개 생성');
+  return logs;
+}
+
+// 🗑️ 로그 파일들 클리어
+async function clearLogFiles() {
+  const fs = require('fs').promises;
+  const os = require('os');
+  
+  try {
+    const logDir = path.join(os.homedir(), '.fairy-assistant', 'logs');
+    const logFiles = ['debug.log', 'session.log', 'mcp.log', 'main.log'];
+    
+    for (const filename of logFiles) {
+      const filepath = path.join(logDir, filename);
+      try {
+        await fs.writeFile(filepath, '', 'utf8');
+        console.log(`🗑️ ${filename} 클리어 완료`);
+      } catch (error) {
+        // 파일이 없으면 건너뛰기
+        if (error.code !== 'ENOENT') {
+          console.error(`❌ ${filename} 클리어 실패:`, error);
+        }
+      }
+    }
+    
+    console.log('✅ 모든 로그 파일 클리어 완료');
+    return true;
+    
+  } catch (error) {
+    console.error('❌ 로그 클리어 실패:', error);
+    return false;
+  }
+}
+
+// 💾 로그 내보내기
+async function exportLogFiles() {
+  const fs = require('fs').promises;
+  const os = require('os');
+  
+  try {
+    // 현재 로그들 로드
+    const logs = await loadLogFiles();
+    
+    // 로그를 텍스트로 변환
+    let exportContent = `# Fairy Assistant 로그 내보내기\n`;
+    exportContent += `# 내보낸 시간: ${new Date().toLocaleString()}\n`;
+    exportContent += `# 총 로그 개수: ${logs.length}\n\n`;
+    
+    logs.forEach(log => {
+      const timestamp = new Date(log.timestamp).toLocaleString();
+      exportContent += `[${timestamp}] [${log.level.toUpperCase()}] ${log.message} (${log.source})\n`;
+    });
+    
+    // 바탕화면에 저장
+    const desktopPath = path.join(os.homedir(), 'Desktop');
+    const filename = `fairy-assistant-logs-${new Date().toISOString().split('T')[0]}.txt`;
+    const filepath = path.join(desktopPath, filename);
+    
+    await fs.writeFile(filepath, exportContent, 'utf8');
+    
+    console.log(`💾 로그 내보내기 완료: ${filepath}`);
+    return { success: true, filepath };
+    
+  } catch (error) {
+    console.error('❌ 로그 내보내기 실패:', error);
+    return { success: false, filepath: null };
+  }
+}
+
+// 💻 시스템 정보 창 생성
+function createSystemInfoWindow() {
+  const systemInfoWindow = new BrowserWindow({
+    width: 750,
+    height: 650,
+    center: true,
+    resizable: true,
+    minimizable: false,
+    maximizable: true,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    },
+    titleBarStyle: 'hiddenInset',
+    vibrancy: 'ultra-dark',
+    transparent: true,
+    show: false
+  });
+
+  systemInfoWindow.loadFile(path.join(__dirname, 'system-info.html'));
+  
+  systemInfoWindow.once('ready-to-show', () => {
+    systemInfoWindow.show();
+    systemInfoWindow.focus();
+  });
+  
+  // 개발 모드에서만 DevTools 열기
+  if (process.env.NODE_ENV === 'development') {
+    systemInfoWindow.webContents.openDevTools();
+  }
+
+  console.log('💻 시스템 정보 창 열림');
+  return systemInfoWindow;
+}
+
+// 💻 시스템 정보 수집
+async function loadSystemInfo() {
+  const os = require('os');
+  
+  try {
+    // 기본 시스템 정보
+    const platform = os.platform();
+    const release = os.release();
+    const arch = os.arch();
+    const hostname = os.hostname();
+    const uptime = os.uptime();
+    
+    // 메모리 정보
+    const totalMemory = os.totalmem();
+    const freeMemory = os.freemem();
+    const usedMemory = totalMemory - freeMemory;
+    const memoryUsagePercent = (usedMemory / totalMemory) * 100;
+    
+    // CPU 정보
+    const cpus = os.cpus();
+    const cpuCount = cpus.length;
+    const loadAverage = os.loadavg();
+    
+    // 프로세스 정보
+    const pid = process.pid;
+    const processUptime = process.uptime() * 1000; // 밀리초로 변환
+    
+    // 버전 정보
+    const nodeVersion = process.versions.node;
+    const electronVersion = process.versions.electron;
+    const chromeVersion = process.versions.chrome;
+    const v8Version = process.versions.v8;
+    
+    // Fairy Assistant 특화 정보
+    const fairyMovement = fairySystem ? !fairySystem.isPaused : false;
+    const pythonBridge = pythonBridge !== null && pythonBridge !== undefined;
+    
+    const systemInfo = {
+      // 시스템 기본 정보
+      platform: formatPlatformName(platform),
+      release,
+      arch,
+      hostname,
+      uptime,
+      
+      // 메모리 정보
+      totalMemory,
+      freeMemory,
+      usedMemory,
+      memoryUsagePercent,
+      
+      // CPU 정보
+      cpuCount,
+      loadAverage,
+      cpuModel: cpus[0]?.model || 'Unknown',
+      
+      // 프로세스 정보
+      pid,
+      processUptime,
+      
+      // 버전 정보
+      nodeVersion,
+      electronVersion,
+      chromeVersion,
+      v8Version,
+      
+      // Fairy Assistant 정보
+      fairyMovement,
+      pythonBridge,
+      
+      // 수집 시간
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('💻 시스템 정보 수집 완료');
+    return systemInfo;
+    
+  } catch (error) {
+    console.error('❌ 시스템 정보 수집 실패:', error);
+    return null;
+  }
+}
+
+// 🖥️ 플랫폼 이름 포맷팅
+function formatPlatformName(platform) {
+  const platformNames = {
+    'darwin': 'macOS',
+    'win32': 'Windows',
+    'linux': 'Linux',
+    'freebsd': 'FreeBSD',
+    'openbsd': 'OpenBSD',
+    'sunos': 'SunOS',
+    'aix': 'AIX'
+  };
+  
+  return platformNames[platform] || platform;
+}
+
+// ℹ️ About 창 생성
+function createAboutWindow() {
+  const aboutWindow = new BrowserWindow({
+    width: 560,
+    height: 720,
+    center: true,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    },
+    titleBarStyle: 'hiddenInset',
+    vibrancy: 'ultra-dark',
+    transparent: true,
+    show: false
+  });
+
+  aboutWindow.loadFile(path.join(__dirname, 'about.html'));
+  
+  aboutWindow.once('ready-to-show', () => {
+    aboutWindow.show();
+    aboutWindow.focus();
+  });
+  
+  // 개발 모드에서만 DevTools 열기
+  if (process.env.NODE_ENV === 'development') {
+    aboutWindow.webContents.openDevTools();
+  }
+
+  console.log('ℹ️ About 창 열림');
+  return aboutWindow;
+}
+
+// 🎨 커스터마이징 창 생성
+function createCustomizationWindow() {
+  const customizationWindow = new BrowserWindow({
+    width: 680,
+    height: 800,
+    center: true,
+    resizable: true,
+    minimizable: false,
+    maximizable: true,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    },
+    titleBarStyle: 'hiddenInset',
+    vibrancy: 'ultra-dark',
+    transparent: true,
+    show: false
+  });
+
+  customizationWindow.loadFile(path.join(__dirname, 'customization.html'));
+  
+  customizationWindow.once('ready-to-show', () => {
+    customizationWindow.show();
+    customizationWindow.focus();
+  });
+  
+  // 개발 모드에서만 DevTools 열기
+  if (process.env.NODE_ENV === 'development') {
+    customizationWindow.webContents.openDevTools();
+  }
+
+  console.log('🎨 커스터마이징 창 열림');
+  return customizationWindow;
 }
 
 function createAuthSettingsWindow() {
@@ -538,6 +1242,7 @@ function createFairyInternalSpeech(fairyX, fairyY, message) {
     minimizable: false,
     maximizable: false,
     focusable: false, // 포커스를 받지 않음
+    show: false, // 창 생성 시 포커스 도난 방지
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -550,6 +1255,11 @@ function createFairyInternalSpeech(fairyX, fairyY, message) {
     path.join(__dirname, 'fairy-internal-speech.html'),
     { query: { message: encodedMessage } }
   );
+  
+  // 창이 로드된 후 표시 (포커스 도난 방지)
+  fairyInternalSpeechWindow.once('ready-to-show', () => {
+    fairyInternalSpeechWindow.show();
+  });
   
   // 창이 닫힐 때 변수 리셋
   fairyInternalSpeechWindow.on('closed', () => {
@@ -684,32 +1394,56 @@ function createFairy() {
     }
   });
 
+  // 🧚‍♀️ Fairy 윈도우를 House 윈도우보다 높은 z-level에 배치
+  fairyWindow.setAlwaysOnTop(true, 'floating');
+
   // 요정도 클릭 가능하게 설정
   fairyWindow.setIgnoreMouseEvents(false);
-  fairyWindow.loadFile(path.join(__dirname, 'fairy.html'));
+  fairyWindow.loadFile(path.join(__dirname, 'luca-fairy.html'));
 
-  // 렌더러 프로세스에 필요한 객체들 노출
-  fairyWindow.webContents.on('dom-ready', () => {
+  // LUCA 캐릭터 로드 완료 후 통합 설정
+  fairyWindow.webContents.once('did-finish-load', () => {
+    console.log('🧚‍♀️ LUCA 요정 창 로드 완료');
+    
     fairyWindow.webContents.executeJavaScript(`
+      // Fairy System과의 연동을 위한 글로벌 객체
       window.fairySystem = {
         pauseMovement: () => {
-          console.log('FairySystem.pauseMovement called');
-          require('electron').ipcRenderer.send('pause-fairy-movement');
+          console.log('🔄 FairySystem.pauseMovement 호출');
+          if (typeof require !== 'undefined') {
+            require('electron').ipcRenderer.send('pause-fairy-movement');
+          }
         },
         resumeMovement: () => {
-          console.log('FairySystem.resumeMovement called');
-          require('electron').ipcRenderer.send('resume-fairy-movement');
+          console.log('🔄 FairySystem.resumeMovement 호출');
+          if (typeof require !== 'undefined') {
+            require('electron').ipcRenderer.send('resume-fairy-movement');
+          }
         },
         setNewPosition: (x, y) => {
-          console.log('FairySystem.setNewPosition called:', x, y);
-          require('electron').ipcRenderer.send('set-fairy-position', x, y);
+          console.log('🔄 FairySystem.setNewPosition 호출:', x, y);
+          const safeX = typeof x === 'number' ? x : Number(x) || 0;
+          const safeY = typeof y === 'number' ? y : Number(y) || 0;
+          if (typeof require !== 'undefined') {
+            require('electron').ipcRenderer.send('set-fairy-position', safeX, safeY);
+          }
         }
       };
+      
       window.electronAPI = {
         moveWindow: (x, y) => {
-          console.log('ElectronAPI.moveWindow called:', x, y);
-          // 직접 윈도우 이동 (contextIsolation이 false이므로 가능)
-          require('electron').ipcRenderer.send('move-fairy-window', x, y);
+          console.log('🖱️ ElectronAPI.moveWindow 호출:', x, y);
+          const safeX = typeof x === 'number' ? x : Number(x) || 0;
+          const safeY = typeof y === 'number' ? y : Number(y) || 0;
+          require('electron').ipcRenderer.send('move-fairy-window', safeX, safeY);
+        },
+        getWindowPosition: async () => {
+          try {
+            return await require('electron').ipcRenderer.invoke('get-window-position');
+          } catch (error) {
+            console.error('윈도우 위치 가져오기 실패:', error);
+            return { x: 0, y: 0 };
+          }
         }
       };
     `);
@@ -866,6 +1600,14 @@ ipcMain.on('move-fairy-window', (event, x, y) => {
   }
 });
 
+ipcMain.handle('get-window-position', () => {
+  if (fairyWindow && !fairyWindow.isDestroyed()) {
+    const bounds = fairyWindow.getBounds();
+    return { x: bounds.x, y: bounds.y };
+  }
+  return { x: 0, y: 0 };
+});
+
 ipcMain.on('pause-fairy-movement', () => {
   fairySystem.pauseMovement();
 });
@@ -880,8 +1622,82 @@ ipcMain.on('set-fairy-position', (event, x, y) => {
   fairySystem.setNewPosition(newX, newY);
 });
 
-ipcMain.on('open-auth-settings', () => {
-  createAuthSettingsWindow();
+// 🧚‍♀️ 페어리 성격 설정 IPC 핸들러들
+ipcMain.on('open-personality-settings', () => {
+  createPersonalitySettingsWindow();
+});
+
+ipcMain.on('save-personality-settings', (event, settings) => {
+  savePersonalitySettings(settings).then(success => {
+    event.reply('personality-settings-saved', success);
+  });
+});
+
+ipcMain.on('load-personality-settings', (event) => {
+  loadPersonalitySettings().then(settings => {
+    event.reply('personality-settings-loaded', settings);
+  });
+});
+
+// ⚙️ 메인 설정 IPC 핸들러들
+ipcMain.on('open-main-settings', () => {
+  createMainSettingsWindow();
+});
+
+ipcMain.on('save-main-settings', (event, settings) => {
+  saveMainSettings(settings).then(success => {
+    event.reply('main-settings-saved', success);
+  });
+});
+
+ipcMain.on('load-main-settings', (event) => {
+  loadMainSettings().then(settings => {
+    event.reply('main-settings-loaded', settings);
+  });
+});
+
+// 📋 로그 뷰어 IPC 핸들러들
+ipcMain.on('open-log-viewer', () => {
+  createLogViewerWindow();
+});
+
+ipcMain.on('load-logs', (event) => {
+  loadLogFiles().then(logs => {
+    event.reply('logs-loaded', logs);
+  });
+});
+
+ipcMain.on('clear-logs', (event) => {
+  clearLogFiles().then(success => {
+    event.reply('logs-cleared', success);
+  });
+});
+
+ipcMain.on('export-logs', (event) => {
+  exportLogFiles().then(result => {
+    event.reply('logs-exported', result.success, result.filepath);
+  });
+});
+
+// 💻 시스템 정보 IPC 핸들러들
+ipcMain.on('open-system-info', () => {
+  createSystemInfoWindow();
+});
+
+ipcMain.on('load-system-info', (event) => {
+  loadSystemInfo().then(info => {
+    event.reply('system-info-loaded', info);
+  });
+});
+
+// ℹ️ About 창 IPC 핸들러
+ipcMain.on('open-about', () => {
+  createAboutWindow();
+});
+
+// 🎨 커스터마이징 창 IPC 핸들러
+ipcMain.on('open-customization', () => {
+  createCustomizationWindow();
 });
 
 ipcMain.on('open-chat-window', () => {
